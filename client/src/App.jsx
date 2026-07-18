@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./component/Login";
 import Register from "./component/Register";
 import Student from "./component/Student"; // This is your InternDashboard
-import QuizInstructions from "./component/QuizInstructions";
+import QuizInstructions from "./component/Quizinstructions";
 import QuizPage from "./component/QuizPage"; // Make sure this path is correct
 import AdminDashboard from "./component/AdminDashboard";
 
@@ -29,9 +29,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
