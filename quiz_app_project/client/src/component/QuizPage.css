@@ -1,0 +1,369 @@
+.quiz-page-outer {
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+/* --- Timer rings --- */
+.quiz-timer-row {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 28px;
+}
+
+/* Each timer is now "Label :" text next to a ring that only shows the number */
+.timer-unit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.timer-unit-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2d2d2d;
+}
+
+.timer-ring {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.timer-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.timer-ring-track {
+    fill: #1b1b2f;
+    stroke: #2b2b45;
+    stroke-width: 4;
+}
+
+.timer-ring-progress {
+    fill: none;
+    stroke: #1dd1a1;
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.timer-ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer-ring-value {
+    color: #1dd1a1;
+    font-weight: 800;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+/* --- Card --- */
+/* Fills the page like a proper full-screen quiz, but the footer is pinned to
+   the bottom via margin-top: auto on .quiz-footer below — rather than
+   vertically centering the question block, which stretched the empty space
+   above/below it out on short quizzes. */
+.quiz-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e6e6e6;
+    box-shadow: 0 20px 45px rgba(45, 45, 45, 0.06);
+    padding: 44px 64px 56px;
+    width: 100%;
+    max-width: 1040px;
+    min-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+}
+
+.quiz-info-box {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: #f7f7fb;
+    border-radius: 12px;
+    padding: 22px 30px;
+    margin-bottom: 24px;
+    font-size: 1.05rem;
+}
+
+.quiz-info-col p {
+    margin: 0 0 10px 0;
+    color: #2d2d2d;
+    font-size: 1.05rem;
+}
+
+.quiz-info-col p:last-child { margin-bottom: 0; }
+
+.quiz-info-col .label {
+    font-weight: 700;
+    color: #1f1f1f;
+}
+
+.quiz-progress {
+    text-align: right;
+    color: #999;
+    font-size: 0.9rem;
+    margin: 0 0 20px 0;
+}
+
+/* Holds the question + options. No longer flex/centered — it just sits
+   naturally after the info box with normal spacing. The footer (outside
+   this wrapper) is what anchors to the bottom of the full-height card. */
+.quiz-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.quiz-question {
+    text-align: top;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f1f1f;
+    margin: 0 0 36px 0;
+    line-height: 1.4;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 820px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.option-btn {
+    background: #fff;
+    border: 1.5px solid #e4e4ee;
+    border-radius: 10px;
+    padding: 24px 26px;
+    font-size: 1.05rem;
+    color: #333;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.option-btn:hover {
+    border-color: #c9c3f7;
+    background: #fbfaff;
+}
+
+.option-btn.selected {
+    border-color: #6c5ce7;
+    background: #6c5ce7;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Pinned to the bottom of the (full-height) card, so the layout still fills
+   the page even when there's only one short question above it. */
+.quiz-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 820px;
+    width: 100%;
+    margin: auto auto 0;
+}
+
+.nav-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 14px 34px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.nav-btn-secondary {
+    background: #f0f0f5;
+    color: #b3b3c0;
+}
+
+.nav-btn-secondary:disabled {
+    cursor: not-allowed;
+}
+
+.nav-btn-secondary:not(:disabled) {
+    color: #555;
+    background: #ececf4;
+}
+
+.nav-btn-primary {
+    background: #6c5ce7;
+    color: #fff;
+}
+
+.nav-btn-primary:hover:not(:disabled) {
+    background: #5a4bcf;
+}
+
+.nav-btn-primary:disabled {
+    background: #d8d4f7;
+    cursor: not-allowed;
+}
+
+.submit-error {
+    color: #e74c3c;
+    text-align: center;
+    margin-top: 18px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .quiz-page-outer {
+        padding: 20px 12px;
+    }
+    .quiz-card {
+        padding: 28px 22px 36px;
+        min-height: auto;
+    }
+    .quiz-question {
+        font-size: 1.15rem;
+    }
+    .options-grid {
+        grid-template-columns: 1fr;
+    }
+    .quiz-info-box {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 18px 20px;
+    }
+    .quiz-info-col {
+        width: 100%;
+        text-align: left;
+    }
+    .quiz-info-col p {
+        margin: 0 0 6px 0;
+    }
+    .quiz-timer-row {
+        gap: 18px;
+    }
+    .timer-unit-label {
+        font-size: 0.8rem;
+    }
+}
+
+/* --- Result popup: small box, auto-dismisses and redirects --- */
+.quiz-result-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 30, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: resultFadeIn 0.2s ease;
+}
+
+.quiz-result-popup {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 48px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    animation: resultPopIn 0.25s ease;
+}
+
+.quiz-result-score {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #6c5ce7;
+}
+
+.quiz-result-note {
+    color: #888;
+    font-size: 0.9rem;
+    margin: 6px 0 0 0;
+}
+
+@keyframes resultFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes resultPopIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* --- Fullscreen enforcement --- */
+/* When the student exits fullscreen, the quiz content blurs and becomes
+   unusable — it can't be read, clicked, selected, or screenshotted cleanly —
+   until they click back into fullscreen via the overlay below. */
+.quiz-page-outer.is-blurred .quiz-card {
+    filter: blur(6px);
+    pointer-events: none;
+    user-select: none;
+}
+
+.quiz-card {
+    user-select: none;
+}
+
+.fullscreen-warning-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 30, 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.fullscreen-warning-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px 44px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+}
+
+.fullscreen-warning-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: #fdecea;
+    color: #e74c3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.4rem;
+}
+
+.fullscreen-warning-box h2 {
+    margin: 0 0 10px 0;
+    color: #1f1f1f;
+    font-size: 1.15rem;
+}
+
+.fullscreen-warning-box p {
+    margin: 0 0 24px 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}

@@ -1,0 +1,531 @@
+/* ======================================================
+   BASE / LAYOUT
+====================================================== */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #f0f2f5;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.dashboard-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background: #f0f2f5;
+}
+
+/* ======================================================
+   SIDEBAR
+====================================================== */
+
+.sidebar {
+    width: 220px;
+    background: #ffffff;
+    padding: 20px 10px;
+    margin: 10px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.sidebar .logo {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    color: #6c5ce7;
+    padding-left: 15px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar li {
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    border-radius: 10px;
+    color: #555;
+    font-size: 0.9rem;
+    transition: 0.3s;
+}
+
+.sidebar li.active {
+    background: #6c5ce7;
+    color: white;
+}
+
+.sidebar li:hover:not(.active) {
+    background: #f4f4f4;
+}
+
+/* ======================================================
+   MAIN CONTENT
+====================================================== */
+
+.main-content {
+    flex: 1;
+    padding: 20px 30px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    margin: 10px 10px 10px 0;
+    background: #ffffff;
+}
+
+/* ======================================================
+   HEADER
+====================================================== */
+
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.top-header h1 {
+    color: #2d3436;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.header-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 30px;
+    padding: 8px 16px;
+    min-width: 220px;
+}
+
+.search-icon {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.search-bar input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    font-size: 0.9rem;
+    color: #2d2d2d;
+}
+
+.btn-export {
+    background: #00b894;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.btn-export:hover {
+    background: #00a383;
+}
+
+/* ======================================================
+   OVERVIEW / STATS CARDS
+====================================================== */
+
+.overview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card h3 {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+}
+
+.stat-card p {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 0;
+    color: #2d3436;
+}
+
+.chart-card-large {
+    background: white;
+    padding: 30px;
+    margin-top: 10px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+}
+
+/* ======================================================
+   DATA TABLE (Interns)
+====================================================== */
+
+.data-table {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #f0f0f0;
+}
+
+.data-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    table-layout: fixed;
+}
+
+.data-table th {
+    color: #7f8c8d;
+    font-weight: 600;
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid #f4f4f4;
+}
+
+.data-table td {
+    padding: 15px;
+    border-bottom: 1px solid #f4f4f4;
+    color: #333;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+.btn-start {
+    background: #00b894;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-start:hover {
+    background: #00a383;
+}
+
+/* ======================================================
+   QUIZ BUILDER
+====================================================== */
+
+.quiz-builder {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid #e0e0e0;
+}
+
+.quiz-builder h2 {
+    color: #2d3436;
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.quiz-builder > ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+}
+
+.quiz-builder > ul li {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.setup-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.quiz-input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    display: block;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #2d2d2d;
+    background: #fff;
+}
+
+.quiz-input:focus {
+    outline: none;
+    border-color: #6c5ce7;
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
+}
+
+.question-card {
+    background: #fdfdfd;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+}
+
+.options-grid-mini {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.btn-add {
+    background: #6c5ce7;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-add:hover {
+    background: #5a4bd6;
+}
+
+.btn-save {
+    background: #00b894;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-save:hover {
+    background: #00a383;
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ======================================================
+   RESPONSIVE
+====================================================== */
+
+@media (max-width: 900px) {
+    .dashboard-container {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+    }
+    .sidebar {
+        width: auto;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .setup-card {
+        grid-template-columns: 1fr;
+    }
+    .options-grid-mini {
+        grid-template-columns: 1fr;
+    }
+}
+/* --- Domain filter (left of search, Interns tab) --- */
+.domain-filter-select {
+    border: 1px solid #eee;
+    background: #f9f9f9;
+    border-radius: 30px;
+    padding: 9px 16px;
+    font-size: 0.85rem;
+    color: #2d2d2d;
+    cursor: pointer;
+    outline: none;
+}
+
+.domain-filter-select:focus {
+    border-color: #6c5ce7;
+}
+
+/* --- Student "View" dialog --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 30, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 20px;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 30px 34px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1f1f1f;
+}
+
+.modal-close {
+    background: #f2f2f6;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: #e6e6ee;
+}
+
+.modal-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+    background: #f7f7fb;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+}
+
+.modal-details-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9rem;
+    color: #2d2d2d;
+    word-break: break-word;
+}
+
+.modal-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #999;
+    font-weight: 700;
+}
+
+.modal-stats-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.modal-stat {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+}
+
+.modal-stat-num {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #6c5ce7;
+}
+
+.modal-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 2px;
+}
+
+.modal-attempts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.modal-attempts-table th {
+    text-align: left;
+    color: #999;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-attempts-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f4f4f8;
+    color: #2d2d2d;
+}

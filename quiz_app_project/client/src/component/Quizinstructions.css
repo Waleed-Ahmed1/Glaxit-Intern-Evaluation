@@ -1,0 +1,153 @@
+.instructions-container {
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    padding: 60px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.instructions-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e6e6e6;
+    box-shadow: 0 20px 45px rgba(45, 45, 45, 0.06);
+    padding: 44px 50px;
+    width: 100%;
+    max-width: 700px;
+    text-align: center;
+}
+
+.instructions-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #6c5ce7;
+    background: #f1f0fb;
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+}
+
+.instructions-card h1 {
+    margin: 0 0 20px 0;
+    color: #1f1f1f;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+/* Domain / duration / questions / points — centered and evenly aligned */
+.quiz-meta {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #f7f7fb;
+    border: 1px solid #ececf5;
+    color: #444;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 20px;
+}
+
+.meta-chip-icon {
+    color: #6c5ce7;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.quiz-schedule {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #666;
+    background: #fbfaff;
+    border: 1px dashed #d9d4f7;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin: 0 auto 26px;
+}
+
+/* Red "Instructions" badge, replacing the old plain "Before you begin" heading */
+.instructions-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fdecea;
+    color: #e63946;
+    font-weight: 800;
+    font-size: 0.95rem;
+    padding: 9px 20px;
+    border-radius: 30px;
+    border: 1px solid #f6c9cb;
+    margin: 6px auto 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.instructions-list {
+    text-align: left;
+    padding-left: 20px;
+    margin-bottom: 34px;
+    line-height: 1.8;
+    color: #444;
+    font-size: 0.94rem;
+}
+
+.instructions-list li {
+    margin-bottom: 10px;
+}
+
+/* Important warning phrases called out in red within the instructions list */
+.instr-warn {
+    color: #e63946;
+    font-weight: 700;
+}
+
+.instructions-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: #6c5ce7;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 12px 0;
+}
+
+.btn-start-quiz {
+    background: #6c5ce7;
+    color: white;
+    border: none;
+    padding: 15px 56px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-start-quiz:hover {
+    background: #5a4bcf;
+}
+
+.btn-start-quiz:disabled {
+    background: #d8d4f7;
+    cursor: not-allowed;
+}
