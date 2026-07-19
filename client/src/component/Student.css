@@ -28,8 +28,9 @@ body { margin: 0; padding: 0; background: #f0f2f5; font-family: 'Segoe UI', sans
 .sidebar li.active { background: #6c5ce7; color: white; }
 .sidebar li:hover:not(.active) { background: #f4f4f4; }
 
-/* Only relevant on phones (see the media query below) — hidden on desktop */
-.sidebar-top-row { display: none; align-items: center; justify-content: space-between; }
+/* Holds the logo + (phone-only) close button. Always visible so the logo
+   shows on desktop too — only .sidebar-close-btn below is phone-only. */
+.sidebar-top-row { display: flex; align-items: center; justify-content: space-between; }
 .sidebar-close-btn {
     display: none; align-items: center; justify-content: center;
     width: 32px; height: 32px; border: none; border-radius: 50%;

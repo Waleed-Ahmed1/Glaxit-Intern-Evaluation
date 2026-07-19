@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { FaSearch, FaDownload, FaPlus, FaFileUpload, FaRobot } from "react-icons/fa";
+import { FaSearch, FaDownload, FaPlus, FaFileUpload, FaRobot, FaBars, FaTimes } from "react-icons/fa";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import "./admin.css";
 import { DOMAINS } from "../constants/domains";
@@ -54,14 +54,15 @@ const AdminDashboard = () => {
     // Placeholder until quiz attempts/scoring is built (Phase 5)
     const passStudentsCount = 0;
 
-    // TEMP placeholder — will be replaced with real aggregated scores
-    // once quiz attempts/scoring exists (Phase 5).
-    const programData = [
-        { domain: 'AI', avgScore: 88, passRate: 75, engagement: 82 },
-        { domain: 'Backend', avgScore: 75, passRate: 60, engagement: 70 },
-        { domain: 'Cyber Security', avgScore: 65, passRate: 50, engagement: 60 },
-        { domain: 'UI/UX', avgScore: 80, passRate: 70, engagement: 78 },
-    ];
+    // Real per-domain performance, computed server-side from actual quiz
+    // attempts — see GET /quizzes/domain-stats. Replaces the old hardcoded
+    // sample array.
+    const [domainStats, setDomainStats] = useState([]);
+    const [loadingDomainStats, setLoadingDomainStats] = useState(true);
+    const [domainStatsError, setDomainStatsError] = useState('');
+
+    // Phone-only sidebar drawer, same pattern as the Student dashboard.
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
     function authHeaders() {
         const token = localStorage.getItem('quiz_token');
@@ -85,6 +86,28 @@ const AdminDashboard = () => {
             console.error('Failed to load quizzes:', err);
         } finally {
             setLoadingQuizzes(false);
+        }
+    }
+
+    async function fetchDomainStats() {
+        setLoadingDomainStats(true);
+        setDomainStatsError('');
+        try {
+            const res = await fetch(`${API_BASE}/quizzes/domain-stats`, { headers: authHeaders() });
+            if (res.status === 401 || res.status === 403) {
+                navigate('/login');
+                return;
+            }
+            const data = await res.json();
+            if (!res.ok) {
+                setDomainStatsError(data.error || 'Failed to load performance data');
+                return;
+            }
+            setDomainStats(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setDomainStatsError('Could not reach the server');
+        } finally {
+            setLoadingDomainStats(false);
         }
     }
 
@@ -134,6 +157,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         fetchQuizzes();
         fetchStudents();
+        fetchDomainStats();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -404,6 +428,11 @@ const AdminDashboard = () => {
         }
     }
 
+    function selectTab(tab) {
+        setActiveTab(tab);
+        setMobileNavOpen(false); // picking a tab closes the drawer on phones
+    }
+
     const filteredStudents = students.filter((s) => {
         const term = searchTerm.trim().toLowerCase();
         const matchesSearch =
@@ -417,13 +446,28 @@ const AdminDashboard = () => {
 
     return (
         <div className="dashboard-container">
-            <aside className="sidebar">
-                <div className="logo">Admin Panel</div>
+            {/* Dimmed backdrop behind the drawer on phones — tapping it closes the menu */}
+            {mobileNavOpen && (
+                <div className="sidebar-backdrop" onClick={() => setMobileNavOpen(false)} />
+            )}
+
+            <aside className={`sidebar ${mobileNavOpen ? 'sidebar-open' : ''}`}>
+                <div className="sidebar-top-row">
+                    <div className="logo">Admin Panel</div>
+                    <button
+                        type="button"
+                        className="sidebar-close-btn"
+                        onClick={() => setMobileNavOpen(false)}
+                        aria-label="Close menu"
+                    >
+                        <FaTimes />
+                    </button>
+                </div>
                 <nav>
                     <ul>
-                        <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => setActiveTab('Overview')}>Overview</li>
-                        <li className={activeTab === 'Interns' ? 'active' : ''} onClick={() => setActiveTab('Interns')}>Interns</li>
-                        <li className={activeTab === 'Management' ? 'active' : ''} onClick={() => setActiveTab('Management')}>Management</li>
+                        <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => selectTab('Overview')}>Overview</li>
+                        <li className={activeTab === 'Interns' ? 'active' : ''} onClick={() => selectTab('Interns')}>Interns</li>
+                        <li className={activeTab === 'Management' ? 'active' : ''} onClick={() => selectTab('Management')}>Management</li>
                         <li onClick={() => { localStorage.removeItem('quiz_token'); localStorage.removeItem('quiz_user'); navigate('/login'); }}>Logout</li>
                     </ul>
                 </nav>
@@ -431,7 +475,18 @@ const AdminDashboard = () => {
 
             <main className="main-content">
                 <header className="top-header">
-                    <h1>{activeTab}</h1>
+                    <div className="top-header-left">
+                        <button
+                            type="button"
+                            className="mobile-menu-btn"
+                            onClick={() => setMobileNavOpen(true)}
+                            aria-label="Open menu"
+                            aria-expanded={mobileNavOpen}
+                        >
+                            <FaBars />
+                        </button>
+                        <h1>{activeTab}</h1>
+                    </div>
                     {activeTab === 'Interns' && (
                         <div className="header-controls">
                             <select
@@ -478,20 +533,28 @@ const AdminDashboard = () => {
                         <div className="chart-card-large">
                             <h3 style={{ marginBottom: '4px' }}>Intern Performance by Domain</h3>
                             <p style={{ fontSize: '12px', color: '#999', marginTop: 0, marginBottom: '20px' }}>
-                                Sample data — will reflect real quiz results once scoring is live
+                                Avg score, pass rate, and engagement — computed live from actual quiz attempts
                             </p>
-                            <ResponsiveContainer width="100%" height={320}>
-                                <LineChart data={programData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                                    <XAxis dataKey="domain" tick={{ fontSize: 12 }} />
-                                    <YAxis tick={{ fontSize: 12 }} />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="avgScore" name="Avg Score" stroke="#6c5ce7" strokeWidth={2.5} dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="passRate" name="Pass Rate" stroke="#00b894" strokeWidth={2.5} dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="engagement" name="Engagement" stroke="#e17055" strokeWidth={2.5} dot={{ r: 4 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            {loadingDomainStats ? (
+                                <p>Loading performance data...</p>
+                            ) : domainStatsError ? (
+                                <p style={{ color: 'red' }}>{domainStatsError}</p>
+                            ) : domainStats.length === 0 ? (
+                                <p>No students or quiz attempts yet — this chart will fill in once interns start taking quizzes.</p>
+                            ) : (
+                                <ResponsiveContainer width="100%" height={320}>
+                                    <LineChart data={domainStats} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                                        <XAxis dataKey="domain" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="avgScore" name="Avg Score %" stroke="#6c5ce7" strokeWidth={2.5} dot={{ r: 4 }} />
+                                        <Line type="monotone" dataKey="passRate" name="Pass Rate %" stroke="#00b894" strokeWidth={2.5} dot={{ r: 4 }} />
+                                        <Line type="monotone" dataKey="engagement" name="Engagement %" stroke="#e17055" strokeWidth={2.5} dot={{ r: 4 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </section>
                 )}

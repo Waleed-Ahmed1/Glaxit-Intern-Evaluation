@@ -6,7 +6,7 @@ import {
     updateQuiz,
     deleteQuiz,
 } from '../models/quiz.model.js';
-import { createAttempt, listAttemptsForStudent } from '../models/attempt.model.js';
+import { createAttempt, listAttemptsForStudent, listAllAttempts } from '../models/attempt.model.js';
 import { listUsers } from '../models/user.model.js';
 
 function validateQuestions(questions) {
@@ -414,5 +414,88 @@ export async function myRank(req, res) {
     } catch (err) {
         console.error('My rank error:', err);
         res.status(500).json({ error: 'Something went wrong computing your rank' });
+    }
+}
+
+// Passing threshold used only for the admin "Pass Rate" metric below —
+// a completed attempt counts as a pass once it clears 50% of that quiz's
+// total points. This does not affect a student's actual score/total shown
+// anywhere else, it's purely for aggregation.
+const PASS_THRESHOLD_FRACTION = 0.5;
+
+// Admin-only: real per-domain performance for the Overview chart —
+// average score %, pass rate %, and engagement % (share of that domain's
+// students who have attempted at least one quiz), all computed live from
+// actual quiz attempts rather than hardcoded sample numbers.
+export async function domainStats(req, res) {
+    try {
+        const [allQuizzes, allAttempts, allStudents] = await Promise.all([
+            listQuizzes({}), // every quiz regardless of status — we only need each quiz's domain
+            listAllAttempts(),
+            listUsers({ role: 'student' }),
+        ]);
+
+        const quizDomainMap = new Map(allQuizzes.map((q) => [q._id.toString(), q.domain || 'Unassigned']));
+
+        const byDomain = new Map(); // domain -> { totalScore, totalPossible, attemptCount, passCount, studentsAttempted: Set }
+        function bucket(domain) {
+            if (!byDomain.has(domain)) {
+                byDomain.set(domain, {
+                    totalScore: 0,
+                    totalPossible: 0,
+                    attemptCount: 0,
+                    passCount: 0,
+                    studentsAttempted: new Set(),
+                });
+            }
+            return byDomain.get(domain);
+        }
+
+        // Seed every domain that actually has students, so a domain with
+        // students but zero attempts yet still shows up on the chart at 0%
+        // instead of silently disappearing.
+        const studentsByDomain = new Map(); // domain -> Set(studentId)
+        for (const s of allStudents) {
+            const domain = s.domain || 'Unassigned';
+            if (!studentsByDomain.has(domain)) studentsByDomain.set(domain, new Set());
+            studentsByDomain.get(domain).add(s._id.toString());
+            bucket(domain);
+        }
+
+        for (const a of allAttempts) {
+            const domain = quizDomainMap.get(a.quizId.toString()) || 'Unassigned';
+            const b = bucket(domain);
+            b.totalScore += a.score || 0;
+            b.totalPossible += a.total || 0;
+            b.attemptCount += 1;
+            b.studentsAttempted.add(a.studentId);
+            if (a.total > 0 && a.score / a.total >= PASS_THRESHOLD_FRACTION) {
+                b.passCount += 1;
+            }
+        }
+
+        const result = [...byDomain.entries()]
+            .map(([domain, b]) => {
+                const domainStudents = studentsByDomain.get(domain) || new Set();
+                const avgScore = b.totalPossible > 0 ? Math.round((b.totalScore / b.totalPossible) * 100) : 0;
+                const passRate = b.attemptCount > 0 ? Math.round((b.passCount / b.attemptCount) * 100) : 0;
+                const engagement = domainStudents.size > 0
+                    ? Math.round((b.studentsAttempted.size / domainStudents.size) * 100)
+                    : 0;
+                return {
+                    domain,
+                    avgScore,
+                    passRate,
+                    engagement,
+                    attemptCount: b.attemptCount,
+                    studentCount: domainStudents.size,
+                };
+            })
+            .sort((x, y) => x.domain.localeCompare(y.domain));
+
+        res.json(result);
+    } catch (err) {
+        console.error('Domain stats error:', err);
+        res.status(500).json({ error: 'Something went wrong computing domain performance' });
     }
 }

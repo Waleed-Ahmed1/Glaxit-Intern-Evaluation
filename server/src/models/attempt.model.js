@@ -24,6 +24,12 @@ export async function createAttempt({ quizId, studentId, answers, score, total, 
     return { _id: result.insertedId, ...doc };
 }
 
+// Admin-only: every attempt across every student, used to aggregate
+// per-domain performance stats (see quiz.controller.js#domainStats).
+export async function listAllAttempts() {
+    return attemptsCollection().find({}).toArray();
+}
+
 export async function listAttemptsForStudent(studentId) {
     return attemptsCollection().find({ studentId }).sort({ submittedAt: -1 }).toArray();
 }
