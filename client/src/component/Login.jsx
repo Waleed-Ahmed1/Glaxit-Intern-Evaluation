@@ -6,6 +6,11 @@ import { FaUser, FaLock, FaCheckCircle } from "react-icons/fa";
 import logo from "../assets/logo.png";
 import office from "../assets/office.jpg";
 
+// In production (Vercel) client + API share the same domain, so '/api' just
+// works with no config. Locally, set VITE_API_BASE=http://localhost:3000/api
+// in client/.env so the dev server (on a different port) still reaches Express.
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -21,7 +26,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

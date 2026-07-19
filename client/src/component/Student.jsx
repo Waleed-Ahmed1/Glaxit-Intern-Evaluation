@@ -4,7 +4,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./Student.css";
 
-const API_BASE = "http://localhost:3000/api";
+// In production (Vercel) client + API share the same domain, so '/api' just
+// works with no config. Locally, set VITE_API_BASE=http://localhost:3000/api
+// in client/.env so the dev server (on a different port) still reaches Express.
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 function terminationLabel(reason) {
     if (reason === 'tab_switch') return 'Submitted due to tab switch';

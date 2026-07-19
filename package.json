@@ -1,0 +1,14 @@
+{
+  "name": "quiz-app-root",
+  "private": true,
+  "type": "module",
+  "description": "Root package.json used only by Vercel to install dependencies for /api — the actual client and server apps keep their own package.json files.",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.5.0"
+  }
+}

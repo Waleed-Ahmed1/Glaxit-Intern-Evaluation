@@ -5,7 +5,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import "./admin.css";
 import { DOMAINS } from "../constants/domains";
 
-const API_BASE = "http://localhost:3000/api";
+// In production (Vercel) client + API share the same domain, so '/api' just
+// works with no config. Locally, set VITE_API_BASE=http://localhost:3000/api
+// in client/.env so the dev server (on a different port) still reaches Express.
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 function terminationLabel(reason) {
     if (reason === 'tab_switch') return 'Submitted due to tab switch';

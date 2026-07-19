@@ -5,6 +5,11 @@ import { FaUser, FaEnvelope, FaLock, FaUserTag, FaGraduationCap } from "react-ic
 import logo from "../assets/logo.png";
 import { DOMAINS } from "../constants/domains";
 
+// In production (Vercel) client + API share the same domain, so '/api' just
+// works with no config. Locally, set VITE_API_BASE=http://localhost:3000/api
+// in client/.env so the dev server (on a different port) still reaches Express.
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+
 const Register = () => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -36,7 +41,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/api/auth/register", {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

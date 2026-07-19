@@ -231,7 +231,7 @@ export async function submitAttempt(req, res) {
             violationCount = 0,
             autoSubmitted = false,
             timeTakenSeconds = 0,
-            terminationReason = null, // 'tab_switch' | 'fullscreen_exit' — force-submitted for cheating
+            terminationReason = null, // 'tab_switch' — set when force-submitted for repeated tab switching
         } = req.body;
         const isAdmin = req.user.role === 'admin';
 
@@ -256,13 +256,12 @@ export async function submitAttempt(req, res) {
             }
         }
 
-        // Cheat terminations always score zero — decided server-side so a
+        // Tab-switch terminations always score zero — decided server-side so a
         // tampered client can't submit real answers alongside a fake reason.
-        const VALID_TERMINATION_REASONS = ['tab_switch', 'fullscreen_exit'];
-        const isCheatTermination = VALID_TERMINATION_REASONS.includes(terminationReason);
+        const isTabSwitchTermination = terminationReason === 'tab_switch';
 
         let score = 0;
-        if (!isCheatTermination) {
+        if (!isTabSwitchTermination) {
             quiz.questions.forEach((q) => {
                 if (answers[q.id] === q.correctIndex) {
                     score += q.points || 1;
@@ -279,7 +278,7 @@ export async function submitAttempt(req, res) {
             violationCount,
             autoSubmitted,
             timeTakenSeconds,
-            terminationReason: isCheatTermination ? terminationReason : null,
+            terminationReason: isTabSwitchTermination ? 'tab_switch' : null,
         });
 
         res.status(201).json({
