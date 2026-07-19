@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaEnvelope, FaGraduationCap, FaChevronDown, FaSignOutAlt } from "react-icons/fa";
+import { FaEnvelope, FaGraduationCap, FaChevronDown, FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./Student.css";
@@ -75,6 +75,19 @@ const InternDashboard = () => {
     // --- Profile dropdown (top-right, next to the avatar) ---
     const [profileOpen, setProfileOpen] = useState(false);
     const profileRef = useRef(null);
+
+    // --- Mobile sidebar (phone screens only) ---
+    // On phones the sidebar nav is hidden off-screen by default and slides in
+    // as a drawer when the header's menu button is tapped, with a dimmed
+    // backdrop behind it. On desktop/tablet this stays permanently visible
+    // and none of this state has any visual effect (see the min-width:769px
+    // rule in Student.css).
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+    function selectTab(tab) {
+        setActiveTab(tab);
+        setMobileNavOpen(false); // picking a tab closes the drawer on phones
+    }
 
     useEffect(() => {
         function handleClickOutside(e) {
@@ -239,14 +252,29 @@ const InternDashboard = () => {
 
     return (
         <div className="dashboard-container">
-            <aside className="sidebar">
-                <div className="logo">Glaxit Interns</div>
+            {/* Dimmed backdrop behind the drawer on phones — tapping it closes the menu */}
+            {mobileNavOpen && (
+                <div className="sidebar-backdrop" onClick={() => setMobileNavOpen(false)} />
+            )}
+
+            <aside className={`sidebar ${mobileNavOpen ? 'sidebar-open' : ''}`}>
+                <div className="sidebar-top-row">
+                    <div className="logo">Glaxit Interns</div>
+                    <button
+                        type="button"
+                        className="sidebar-close-btn"
+                        onClick={() => setMobileNavOpen(false)}
+                        aria-label="Close menu"
+                    >
+                        <FaTimes />
+                    </button>
+                </div>
                 <nav>
                     <ul>
-                        <li className={activeTab === 'Dashboard' ? 'active' : ''} onClick={() => setActiveTab('Dashboard')}>Dashboard</li>
-                        <li className={activeTab === 'My Quizzes' ? 'active' : ''} onClick={() => setActiveTab('My Quizzes')}>My Quizzes</li>
-                        <li className={activeTab === 'Performance' ? 'active' : ''} onClick={() => setActiveTab('Performance')}>Performance</li>
-                        <li>Certificates</li>
+                        <li className={activeTab === 'Dashboard' ? 'active' : ''} onClick={() => selectTab('Dashboard')}>Dashboard</li>
+                        <li className={activeTab === 'My Quizzes' ? 'active' : ''} onClick={() => selectTab('My Quizzes')}>My Quizzes</li>
+                        <li className={activeTab === 'Performance' ? 'active' : ''} onClick={() => selectTab('Performance')}>Performance</li>
+                        <li onClick={() => setMobileNavOpen(false)}>Certificates</li>
                         <li onClick={handleLogout}>Logout</li>
                     </ul>
                 </nav>
@@ -254,7 +282,18 @@ const InternDashboard = () => {
 
             <main className="main-content">
                 <header className="top-header">
-                    <h1>{activeTab}</h1>
+                    <div className="top-header-left">
+                        <button
+                            type="button"
+                            className="mobile-menu-btn"
+                            onClick={() => setMobileNavOpen(true)}
+                            aria-label="Open menu"
+                            aria-expanded={mobileNavOpen}
+                        >
+                            <FaBars />
+                        </button>
+                        <h1>{activeTab}</h1>
+                    </div>
 
                     <div className="user-profile-wrap" ref={profileRef}>
                         <button
