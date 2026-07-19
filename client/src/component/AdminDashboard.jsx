@@ -64,6 +64,21 @@ const AdminDashboard = () => {
     // Phone-only sidebar drawer, same pattern as the Student dashboard.
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+    // Drives the Overview chart's height/margins — recharts needs an actual
+    // pixel height passed in JS, CSS media queries alone can't shrink it,
+    // so we track viewport width directly.
+    const [isNarrowScreen, setIsNarrowScreen] = useState(
+        () => typeof window !== 'undefined' && window.innerWidth <= 768
+    );
+
+    useEffect(() => {
+        function handleResize() {
+            setIsNarrowScreen(window.innerWidth <= 768);
+        }
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     function authHeaders() {
         const token = localStorage.getItem('quiz_token');
         return {
@@ -542,16 +557,21 @@ const AdminDashboard = () => {
                             ) : domainStats.length === 0 ? (
                                 <p>No students or quiz attempts yet — this chart will fill in once interns start taking quizzes.</p>
                             ) : (
-                                <ResponsiveContainer width="100%" height={320}>
-                                    <LineChart data={domainStats} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                <ResponsiveContainer width="100%" height={isNarrowScreen ? 240 : 320}>
+                                    <LineChart
+                                        data={domainStats}
+                                        margin={isNarrowScreen
+                                            ? { top: 5, right: 8, left: -20, bottom: 5 }
+                                            : { top: 5, right: 30, left: 0, bottom: 5 }}
+                                    >
                                         <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                                        <XAxis dataKey="domain" tick={{ fontSize: 12 }} />
-                                        <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
+                                        <XAxis dataKey="domain" tick={{ fontSize: isNarrowScreen ? 10 : 12 }} interval={0} angle={isNarrowScreen ? -20 : 0} textAnchor={isNarrowScreen ? 'end' : 'middle'} height={isNarrowScreen ? 50 : 30} />
+                                        <YAxis tick={{ fontSize: isNarrowScreen ? 10 : 12 }} domain={[0, 100]} width={isNarrowScreen ? 32 : 60} />
                                         <Tooltip />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="avgScore" name="Avg Score %" stroke="#6c5ce7" strokeWidth={2.5} dot={{ r: 4 }} />
-                                        <Line type="monotone" dataKey="passRate" name="Pass Rate %" stroke="#00b894" strokeWidth={2.5} dot={{ r: 4 }} />
-                                        <Line type="monotone" dataKey="engagement" name="Engagement %" stroke="#e17055" strokeWidth={2.5} dot={{ r: 4 }} />
+                                        <Legend wrapperStyle={isNarrowScreen ? { fontSize: '11px' } : undefined} />
+                                        <Line type="monotone" dataKey="avgScore" name="Avg Score %" stroke="#6c5ce7" strokeWidth={2.5} dot={{ r: isNarrowScreen ? 3 : 4 }} />
+                                        <Line type="monotone" dataKey="passRate" name="Pass Rate %" stroke="#00b894" strokeWidth={2.5} dot={{ r: isNarrowScreen ? 3 : 4 }} />
+                                        <Line type="monotone" dataKey="engagement" name="Engagement %" stroke="#e17055" strokeWidth={2.5} dot={{ r: isNarrowScreen ? 3 : 4 }} />
                                     </LineChart>
                                 </ResponsiveContainer>
                             )}
@@ -566,30 +586,72 @@ const AdminDashboard = () => {
                         ) : filteredStudents.length === 0 ? (
                             <p>No students registered yet.</p>
                         ) : (
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Joined</th>
-                                        <th>Domain</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            <>
+                                {/* Table — shown on tablet/desktop, hidden on phones */}
+                                <div className="table-scroll-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                                <th>Joined</th>
+                                                <th>Domain</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredStudents.map((s) => (
+                                                <tr key={s._id}>
+                                                    <td title={s._id}>{s._id.slice(-6)}</td>
+                                                    <td>{s.name}</td>
+                                                    <td>{s.email}</td>
+                                                    <td>{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</td>
+                                                    <td>{s.domain || '—'}</td>
+                                                    <td><button className="btn-start" onClick={() => openStudentView(s)}>View</button></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Card list — shown on phones, hidden on tablet/desktop.
+                                    Same pattern as the Student dashboard's My Quizzes tab:
+                                    each row becomes its own card with label/value pairs
+                                    stacked vertically instead of a squeezed table row. */}
+                                <div className="record-cards">
                                     {filteredStudents.map((s) => (
-                                        <tr key={s._id}>
-                                            <td title={s._id}>{s._id.slice(-6)}</td>
-                                            <td>{s.name}</td>
-                                            <td>{s.email}</td>
-                                            <td>{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</td>
-                                            <td>{s.domain || '—'}</td>
-                                            <td><button className="btn-start" onClick={() => openStudentView(s)}>View</button></td>
-                                        </tr>
+                                        <div className="record-card" key={s._id}>
+                                            <div className="record-row">
+                                                <span className="record-label">ID</span>
+                                                <span className="record-value" title={s._id}>{s._id.slice(-6)}</span>
+                                            </div>
+                                            <div className="record-row">
+                                                <span className="record-label">Name</span>
+                                                <span className="record-value">{s.name}</span>
+                                            </div>
+                                            <div className="record-row">
+                                                <span className="record-label">Email</span>
+                                                <span className="record-value">{s.email}</span>
+                                            </div>
+                                            <div className="record-row">
+                                                <span className="record-label">Joined</span>
+                                                <span className="record-value">{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}</span>
+                                            </div>
+                                            <div className="record-row">
+                                                <span className="record-label">Domain</span>
+                                                <span className="record-value">{s.domain || '—'}</span>
+                                            </div>
+                                            <div className="record-row">
+                                                <span className="record-label">Action</span>
+                                                <span className="record-value">
+                                                    <button className="btn-start" onClick={() => openStudentView(s)}>View</button>
+                                                </span>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
+                                </div>
+                            </>
                         )}
                     </section>
                 )}

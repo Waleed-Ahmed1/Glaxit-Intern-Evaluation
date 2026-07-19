@@ -100,6 +100,10 @@ body {
 
 .main-content {
     flex: 1;
+    /* Without this, a flex child refuses to shrink below its content's
+       natural width — that's what was pushing the chart off to the side
+       and stretching it instead of letting it resize with the viewport. */
+    min-width: 0;
     padding: 20px 30px;
     overflow-y: auto;
     border: 1px solid #e0e0e0;
@@ -232,6 +236,9 @@ body {
     margin-top: 10px;
     border-radius: 15px;
     border: 1px solid #eee;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* ======================================================
@@ -244,6 +251,8 @@ body {
     border-radius: 15px;
     border: 1px solid #f0f0f0;
 }
+
+.table-scroll-wrap { overflow-x: auto; }
 
 .data-table table {
     width: 100%;
@@ -282,6 +291,11 @@ body {
 .btn-start:hover {
     background: #00a383;
 }
+
+/* Card list shown only on phones (see the media query below) — each row of
+   the table becomes its own card with label/value pairs stacked vertically,
+   instead of a table row squeezed into a narrow screen. Hidden by default. */
+.record-cards { display: none; }
 
 /* ======================================================
    QUIZ BUILDER
@@ -462,6 +476,44 @@ body {
     }
     .options-grid-mini {
         grid-template-columns: 1fr;
+    }
+    .chart-card-large {
+        padding: 16px 10px;
+    }
+
+    /* Swap the plain table for the stacked card list on phones */
+    .data-table { padding: 12px; }
+    .table-scroll-wrap { display: none; }
+    .record-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+
+    .record-card {
+        background: #fafbfc;
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 4px 14px;
+    }
+    .record-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eef0f2;
+    }
+    .record-row:last-child { border-bottom: none; }
+    .record-label {
+        color: #7f8c8d;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+    .record-value {
+        color: #2d3436;
+        font-size: 0.9rem;
+        text-align: right;
     }
 }
 /* --- Domain filter (left of search, Interns tab) --- */
