@@ -447,71 +447,117 @@ const InternDashboard = () => {
                         ) : quizzes.length === 0 ? (
                             <p>No quizzes available right now. Check back later!</p>
                         ) : (
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Quiz Title</th>
-                                        <th>Domain</th>
-                                        <th>Starting Time</th>
-                                        <th>Ending Time</th>
-                                        <th>Start</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {quizzes.map(q => {
-                                        const attempt = attemptedQuizMap.get(q._id?.toString?.() ?? q._id);
-                                        const start = formatDateTimeBlock(q.startAt);
-                                        const end = formatDateTimeBlock(q.endAt);
+                            (() => {
+                                // Compute each row's derived state (start/end formatting,
+                                // pending/closed/completed) once, then reuse it for both
+                                // the desktop table and the phone card list below —
+                                // instead of duplicating this logic in two separate maps.
+                                const syncedNow = getSyncedNow();
+                                const rows = quizzes.map((q) => {
+                                    const attempt = attemptedQuizMap.get(q._id?.toString?.() ?? q._id);
+                                    const start = formatDateTimeBlock(q.startAt);
+                                    const end = formatDateTimeBlock(q.endAt);
+                                    const startAt = q.startAt ? new Date(q.startAt) : null;
+                                    const endAt = q.endAt ? new Date(q.endAt) : null;
+                                    const notYetOpen = syncedNow && startAt && syncedNow < startAt;
+                                    const alreadyClosed = syncedNow && endAt && syncedNow > endAt;
+                                    return { q, attempt, start, end, startAt, notYetOpen, alreadyClosed };
+                                });
 
-                                        const syncedNow = getSyncedNow();
-                                        const startAt = q.startAt ? new Date(q.startAt) : null;
-                                        const endAt = q.endAt ? new Date(q.endAt) : null;
-                                        // Until the clock has synced with the server at least once, or if a
-                                        // quiz has no schedule set, don't block/unblock based on a guess —
-                                        // treat it as available (same as the old behavior).
-                                        const notYetOpen = syncedNow && startAt && syncedNow < startAt;
-                                        const alreadyClosed = syncedNow && endAt && syncedNow > endAt;
+                                const renderAction = ({ attempt, notYetOpen, alreadyClosed, start, startAt, q }) => (
+                                    attempt ? (
+                                        terminationLabel(attempt.terminationReason) ? (
+                                            <span className="badge-missed" title={terminationLabel(attempt.terminationReason)}>
+                                                {terminationLabel(attempt.terminationReason)}
+                                            </span>
+                                        ) : (
+                                            <span className="badge-completed">{attempt.score}/{attempt.total}</span>
+                                        )
+                                    ) : notYetOpen ? (
+                                        <span className="badge-pending" title={`Opens ${start.datePart} ${start.timePart}`}>
+                                            Pending{formatCountdown(startAt - syncedNow) && ` · ${formatCountdown(startAt - syncedNow)}`}
+                                        </span>
+                                    ) : alreadyClosed ? (
+                                        <span className="badge-missed">Missed</span>
+                                    ) : (
+                                        <button className="btn-start" onClick={() => navigate(`/quiz/${q._id}`)}>Start</button>
+                                    )
+                                );
 
-                                        return (
-                                            <tr key={q._id}>
-                                                <td>{q.title}</td>
-                                                <td>{q.domain || '—'}</td>
-                                                <td>
-                                                    <div className="dt-cell">
-                                                        <span className="dt-date">{start.datePart}</span>
-                                                        {start.timePart && <span className="dt-time">{start.timePart}</span>}
+                                return (
+                                    <>
+                                        {/* Table — shown on tablet/desktop, hidden on phones */}
+                                        <div className="table-scroll-wrap">
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Quiz Title</th>
+                                                        <th>Domain</th>
+                                                        <th>Starting Time</th>
+                                                        <th>Ending Time</th>
+                                                        <th>Start</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rows.map((row) => (
+                                                        <tr key={row.q._id}>
+                                                            <td>{row.q.title}</td>
+                                                            <td>{row.q.domain || '—'}</td>
+                                                            <td>
+                                                                <div className="dt-cell">
+                                                                    <span className="dt-date">{row.start.datePart}</span>
+                                                                    {row.start.timePart && <span className="dt-time">{row.start.timePart}</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div className="dt-cell">
+                                                                    <span className="dt-date">{row.end.datePart}</span>
+                                                                    {row.end.timePart && <span className="dt-time">{row.end.timePart}</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td>{renderAction(row)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Card list — shown on phones, hidden on tablet/desktop.
+                                            Each quiz becomes its own card with its fields stacked
+                                            as label/value rows instead of a squeezed table row. */}
+                                        <div className="record-cards">
+                                            {rows.map((row) => (
+                                                <div className="record-card" key={row.q._id}>
+                                                    <div className="record-row">
+                                                        <span className="record-label">Quiz Title</span>
+                                                        <span className="record-value">{row.q.title}</span>
                                                     </div>
-                                                </td>
-                                                <td>
-                                                    <div className="dt-cell">
-                                                        <span className="dt-date">{end.datePart}</span>
-                                                        {end.timePart && <span className="dt-time">{end.timePart}</span>}
+                                                    <div className="record-row">
+                                                        <span className="record-label">Domain</span>
+                                                        <span className="record-value">{row.q.domain || '—'}</span>
                                                     </div>
-                                                </td>
-                                                <td>
-                                                    {attempt ? (
-                                                        terminationLabel(attempt.terminationReason) ? (
-                                                            <span className="badge-missed" title={terminationLabel(attempt.terminationReason)}>
-                                                                {terminationLabel(attempt.terminationReason)}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="badge-completed">{attempt.score}/{attempt.total}</span>
-                                                        )
-                                                    ) : notYetOpen ? (
-                                                        <span className="badge-pending" title={`Opens ${start.datePart} ${start.timePart}`}>
-                                                            Pending{formatCountdown(startAt - syncedNow) && ` · ${formatCountdown(startAt - syncedNow)}`}
+                                                    <div className="record-row">
+                                                        <span className="record-label">Starting Time</span>
+                                                        <span className="record-value">
+                                                            {row.start.datePart}{row.start.timePart && ` · ${row.start.timePart}`}
                                                         </span>
-                                                    ) : alreadyClosed ? (
-                                                        <span className="badge-missed">Missed</span>
-                                                    ) : (
-                                                        <button className="btn-start" onClick={() => navigate(`/quiz/${q._id}`)}>Start</button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                                    </div>
+                                                    <div className="record-row">
+                                                        <span className="record-label">Ending Time</span>
+                                                        <span className="record-value">
+                                                            {row.end.datePart}{row.end.timePart && ` · ${row.end.timePart}`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="record-row">
+                                                        <span className="record-label">Action</span>
+                                                        <span className="record-value">{renderAction(row)}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                );
+                            })()
                         )}
                     </section>
                 )}
@@ -528,28 +574,66 @@ const InternDashboard = () => {
                             ) : history.length === 0 ? (
                                 <p>No quiz attempts yet — take a quiz to see your history here.</p>
                             ) : (
-                                <table>
-                                    <thead><tr><th>Title</th><th>Date</th><th>Marks</th><th>Time Taken</th></tr></thead>
-                                    <tbody>{history.map((h, i) => (
-                                        <tr key={i}>
-                                            <td>{h.title}</td>
-                                            <td>{h.date}</td>
-                                            <td>
-                                                {terminationLabel(h.terminationReason) ? (
-                                                    <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>
-                                                        {terminationLabel(h.terminationReason)}
+                                <>
+                                    <div className="table-scroll-wrap">
+                                        <table>
+                                            <thead><tr><th>Title</th><th>Date</th><th>Marks</th><th>Time Taken</th></tr></thead>
+                                            <tbody>{history.map((h, i) => (
+                                                <tr key={i}>
+                                                    <td>{h.title}</td>
+                                                    <td>{h.date}</td>
+                                                    <td>
+                                                        {terminationLabel(h.terminationReason) ? (
+                                                            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                                                                {terminationLabel(h.terminationReason)}
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                {h.scoreObtained}/{h.scoreTotal}{' '}
+                                                                <span style={{ color: '#888', fontSize: '0.8rem' }}>({h.score}%)</span>
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                    <td>{h.timeLabel}</td>
+                                                </tr>
+                                            ))}</tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="record-cards">
+                                        {history.map((h, i) => (
+                                            <div className="record-card" key={i}>
+                                                <div className="record-row">
+                                                    <span className="record-label">Title</span>
+                                                    <span className="record-value">{h.title}</span>
+                                                </div>
+                                                <div className="record-row">
+                                                    <span className="record-label">Date</span>
+                                                    <span className="record-value">{h.date}</span>
+                                                </div>
+                                                <div className="record-row">
+                                                    <span className="record-label">Marks</span>
+                                                    <span className="record-value">
+                                                        {terminationLabel(h.terminationReason) ? (
+                                                            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                                                                {terminationLabel(h.terminationReason)}
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                {h.scoreObtained}/{h.scoreTotal}{' '}
+                                                                <span style={{ color: '#888', fontSize: '0.8rem' }}>({h.score}%)</span>
+                                                            </>
+                                                        )}
                                                     </span>
-                                                ) : (
-                                                    <>
-                                                        {h.scoreObtained}/{h.scoreTotal}{' '}
-                                                        <span style={{ color: '#888', fontSize: '0.8rem' }}>({h.score}%)</span>
-                                                    </>
-                                                )}
-                                            </td>
-                                            <td>{h.timeLabel}</td>
-                                        </tr>
-                                    ))}</tbody>
-                                </table>
+                                                </div>
+                                                <div className="record-row">
+                                                    <span className="record-label">Time Taken</span>
+                                                    <span className="record-value">{h.timeLabel}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
                             )}
                         </section>
                         {history.length > 0 && (

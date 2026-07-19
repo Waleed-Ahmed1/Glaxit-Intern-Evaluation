@@ -126,11 +126,17 @@ body { margin: 0; padding: 0; background: #f0f2f5; font-family: 'Segoe UI', sans
 .chart-card h3 { font-size: 0.9rem; color: #555; margin-bottom: 15px; }
 
 .data-table { background: white; padding: 20px; border-radius: 15px; border: 1px solid #f0f0f0; }
+.table-scroll-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
 th { color: #7f8c8d; font-weight: 600; text-align: left; padding: 15px; border-bottom: 2px solid #f4f4f4; }
 td { padding: 15px; border-bottom: 1px solid #f4f4f4; color: #333; }
 .btn-start { background: #00b894; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; }
 .btn-stop { background: #d63031; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: not-allowed; opacity: 0.7; }
+
+/* Card list shown only on phones (see the media query below) — each row of
+   the table becomes its own card with label/value pairs stacked vertically,
+   instead of a table row squeezed into a narrow screen. */
+.record-cards { display: none; }
 /* Table Layout Fix */
 .data-table { 
     background: white; 
@@ -209,13 +215,22 @@ th:nth-child(5), td:nth-child(5) { width: 20%; } /* Action */
    instead of permanently squeezing the layout at the top.
    ============================================================ */
 @media (max-width: 768px) {
-    .dashboard-container { display: block; height: 100vh; height: 100dvh; overflow: hidden; }
+    /* No fixed viewport height here on purpose — with OS-level font-scale/
+       zoom settings, 100vh/100dvh math can end up shorter than the real
+       page content, leaving a gap where the body's background peeks
+       through. Letting the container size itself to its content and
+       scroll like a normal page is what actually avoids that gap in
+       every case. */
+    .dashboard-container { display: block; height: auto; min-height: 100%; overflow: visible; }
 
     .mobile-menu-btn { display: flex; }
     .sidebar-top-row { display: flex; margin-bottom: 20px; }
     .sidebar-close-btn { display: flex; }
 
     .sidebar {
+        /* The drawer is a fixed overlay above the page, so giving it its
+           own 100dvh is fine — it doesn't affect the page's own height
+           the way .dashboard-container's did. */
         position: fixed;
         top: 0;
         left: 0;
@@ -242,8 +257,8 @@ th:nth-child(5), td:nth-child(5) { width: 20%; } /* Action */
     .main-content {
         margin: 10px;
         padding: 16px;
-        height: calc(100vh - 20px);
-        height: calc(100dvh - 20px);
+        height: auto;
+        overflow: visible;
     }
 
     .top-header h1 { font-size: 1.2rem; }
@@ -252,7 +267,38 @@ th:nth-child(5), td:nth-child(5) { width: 20%; } /* Action */
     .stats-grid { grid-template-columns: 1fr; }
     .charts-container { grid-template-columns: 1fr; }
 
-    /* Let the quiz/history tables scroll horizontally instead of squashing columns */
-    .data-table { padding: 12px; overflow-x: auto; }
-    table { table-layout: auto; min-width: 560px; }
+    /* Swap the table for the stacked card list on phones */
+    .data-table { padding: 12px; }
+    .table-scroll-wrap { display: none; }
+    .record-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+
+    .record-card {
+        background: #fafbfc;
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 4px 14px;
+    }
+    .record-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eef0f2;
+    }
+    .record-row:last-child { border-bottom: none; }
+    .record-label {
+        color: #7f8c8d;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+    .record-value {
+        color: #2d3436;
+        font-size: 0.9rem;
+        text-align: right;
+    }
 }
