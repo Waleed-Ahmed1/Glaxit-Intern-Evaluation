@@ -70,6 +70,11 @@ const InternDashboard = () => {
     const [loadingAttempts, setLoadingAttempts] = useState(true);
     const [attemptError, setAttemptError] = useState('');
 
+    // Cross-domain leaderboard rank — computed server-side from every
+    // student sharing this student's domain, see GET /quizzes/me/rank
+    const [rankInfo, setRankInfo] = useState(null); // { rank, totalStudents, score, domain }
+    const [loadingRank, setLoadingRank] = useState(true);
+
     const user = safeParseUser();
 
     // --- Profile dropdown (top-right, next to the avatar) ---
@@ -195,9 +200,32 @@ const InternDashboard = () => {
         }
     }
 
+    // Rank among peers in the same domain — computed server-side so it stays
+    // accurate even as other students take quizzes.
+    async function fetchRank() {
+        setLoadingRank(true);
+        try {
+            const res = await fetch(`${API_BASE}/quizzes/me/rank`, { headers: authHeaders() });
+            if (res.status === 401 || res.status === 403) {
+                navigate('/login');
+                return;
+            }
+            const data = await res.json();
+            if (res.ok) {
+                setRankInfo(data);
+            }
+        } catch (err) {
+            // Rank is a nice-to-have on the dashboard — fail quietly and
+            // just show "—" rather than an error banner.
+        } finally {
+            setLoadingRank(false);
+        }
+    }
+
     useEffect(() => {
         fetchQuizzes();
         fetchAttempts();
+        fetchRank();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -249,6 +277,18 @@ const InternDashboard = () => {
         timeLabel: formatTimeTaken(a.timeTakenSeconds),
         terminationReason: a.terminationReason || null,
     }));
+
+    // "1st" / "2nd" / "3rd" / "4th"... for the Rank card
+    function ordinal(n) {
+        const rem100 = n % 100;
+        if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+        switch (n % 10) {
+            case 1: return `${n}st`;
+            case 2: return `${n}nd`;
+            case 3: return `${n}rd`;
+            default: return `${n}th`;
+        }
+    }
 
     return (
         <div className="dashboard-container">
@@ -359,8 +399,18 @@ const InternDashboard = () => {
                             </div>
                             <div className="card highlight">
                                 <h3>Rank</h3>
-                                {/* Ranking needs a cross-student leaderboard endpoint — not built yet */}
-                                <p className="big-num">—</p>
+                                <p className="big-num">
+                                    {loadingRank
+                                        ? '...'
+                                        : rankInfo?.rank
+                                            ? ordinal(rankInfo.rank)
+                                            : '—'}
+                                </p>
+                                {!loadingRank && rankInfo?.rank && (
+                                    <p className="rank-subtext">
+                                        of {rankInfo.totalStudents} in {rankInfo.domain}
+                                    </p>
+                                )}
                             </div>
                         </section>
                         <section className="charts-container">

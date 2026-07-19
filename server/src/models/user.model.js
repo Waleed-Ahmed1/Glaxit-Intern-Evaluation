@@ -29,10 +29,13 @@ export async function createUser({ name, email, passwordHash, role = 'student', 
     return { _id: result.insertedId, ...doc };
 }
 
-// Used by the admin dashboard's Student Management screen.
-// Optionally filter by role (e.g. listUsers({ role: 'student' })).
-export async function listUsers({ role } = {}) {
-    const filter = role ? { role } : {};
+// Used by the admin dashboard's Student Management screen, and by the
+// ranking calculation (which needs every student sharing one domain).
+// Optionally filter by role (e.g. listUsers({ role: 'student' })) and/or domain.
+export async function listUsers({ role, domain } = {}) {
+    const filter = {};
+    if (role) filter.role = role;
+    if (domain) filter.domain = domain;
     return usersCollection().find(filter).project({ passwordHash: 0 }).toArray();
 }
 

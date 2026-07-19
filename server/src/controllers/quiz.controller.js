@@ -7,6 +7,7 @@ import {
     deleteQuiz,
 } from '../models/quiz.model.js';
 import { createAttempt, listAttemptsForStudent } from '../models/attempt.model.js';
+import { listUsers } from '../models/user.model.js';
 
 function validateQuestions(questions) {
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -352,5 +353,66 @@ export async function studentAttempts(req, res) {
     } catch (err) {
         console.error('Student attempts error:', err);
         res.status(500).json({ error: "Something went wrong fetching this student's attempts" });
+    }
+}
+
+// Student-only: this student's rank among every OTHER student who shares
+// their domain (their real "peer group" for a fair comparison), based on
+// total marks scored across all of that student's quiz attempts.
+//
+// Ties use standard "competition ranking": students with the exact same
+// total marks share the same rank (e.g. two students tied for 1st both
+// show rank 1), and the next distinct total jumps by however many people
+// were tied above it (e.g. 1, 1, 3 — not 1, 1, 2).
+export async function myRank(req, res) {
+    try {
+        if (req.user.role === 'admin') {
+            return res.json({ rank: null, totalStudents: 0, score: 0, domain: null });
+        }
+
+        const domain = req.user.domain;
+        if (!domain) {
+            return res.json({ rank: null, totalStudents: 0, score: 0, domain: null });
+        }
+
+        // Every student sharing this domain is a peer for ranking purposes.
+        const peers = await listUsers({ role: 'student', domain });
+
+        // Sum each peer's total marks across every quiz they've attempted.
+        const totals = await Promise.all(
+            peers.map(async (peer) => {
+                const peerId = peer._id.toString();
+                const attempts = await listAttemptsForStudent(peerId);
+                const total = attempts.reduce((sum, a) => sum + (a.score || 0), 0);
+                return { studentId: peerId, total };
+            })
+        );
+
+        // Highest total marks first.
+        totals.sort((a, b) => b.total - a.total);
+
+        let rank = 0;
+        let previousTotal = null;
+        const ranked = totals.map((entry, index) => {
+            // Only advance the rank number when the total actually changes —
+            // this is what makes tied students share a rank.
+            if (previousTotal === null || entry.total !== previousTotal) {
+                rank = index + 1;
+                previousTotal = entry.total;
+            }
+            return { ...entry, rank };
+        });
+
+        const me = ranked.find((r) => r.studentId === req.user.id);
+
+        res.json({
+            rank: me ? me.rank : null,
+            totalStudents: ranked.length,
+            score: me ? me.total : 0,
+            domain,
+        });
+    } catch (err) {
+        console.error('My rank error:', err);
+        res.status(500).json({ error: 'Something went wrong computing your rank' });
     }
 }
