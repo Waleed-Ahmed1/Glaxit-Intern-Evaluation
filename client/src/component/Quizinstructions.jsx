@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaBriefcase, FaClock, FaQuestionCircle, FaTrophy, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
 import "./Quizinstructions.css";
 
@@ -26,11 +26,25 @@ function formatScheduled(value) {
 const QuizInstructions = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [quiz, setQuiz] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
 
+    // Only reached properly by clicking "Start" on the dashboard, which sets
+    // this flag via navigate(..., { state: { fromDashboard: true } }). A
+    // pasted/bookmarked/shared link, or a fresh tab, arrives with no state
+    // at all — that's exactly how we tell the two apart, since router state
+    // isn't part of the URL. (A page refresh keeps it, since the browser
+    // preserves history state across a reload in the same tab — so an
+    // in-progress flow surviving a refresh is expected, not a loophole.)
+    const cameFromDashboard = !!location.state?.fromDashboard;
+
     useEffect(() => {
+        if (!cameFromDashboard) {
+            setLoading(false);
+            return;
+        }
         async function fetchQuiz() {
             try {
                 const res = await fetch(`${API_BASE}/quizzes/${id}`, { headers: authHeaders() });
@@ -47,14 +61,30 @@ const QuizInstructions = () => {
             }
         }
         fetchQuiz();
-    }, [id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, cameFromDashboard]);
 
     function handleStart() {
         // Attempt fullscreen
         if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen().catch(console.error);
         }
-        navigate(`/quiz/${id}/take`);
+        // Same flag, carried forward — QuizPage checks for this the same way.
+        navigate(`/quiz/${id}/take`, { state: { fromInstructions: true } });
+    }
+
+    if (!cameFromDashboard) {
+        return (
+            <div className="instructions-container">
+                <div className="instructions-card">
+                    <h1>Quiz unavailable</h1>
+                    <p>Quizzes can only be started from your dashboard — please open this quiz by clicking "Start" there.</p>
+                    <button className="btn-back" onClick={() => navigate('/student')}>
+                        &larr; Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     if (loading) {

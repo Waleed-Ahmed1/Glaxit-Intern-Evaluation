@@ -11,6 +11,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 function terminationLabel(reason) {
     if (reason === 'tab_switch') return 'Submitted due to tab switch';
+    if (reason === 'time_up') return 'Time expired — auto-submitted';
     return null;
 }
 
@@ -480,7 +481,12 @@ const InternDashboard = () => {
                                     ) : alreadyClosed ? (
                                         <span className="badge-missed">Missed</span>
                                     ) : (
-                                        <button className="btn-start" onClick={() => navigate(`/quiz/${q._id}`)}>Start</button>
+                                        <button
+                                            className="btn-start"
+                                            onClick={() => navigate(`/quiz/${q._id}`, { state: { fromDashboard: true } })}
+                                        >
+                                            Start
+                                        </button>
                                     )
                                 );
 

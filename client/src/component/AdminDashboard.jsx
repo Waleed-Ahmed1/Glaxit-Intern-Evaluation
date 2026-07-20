@@ -12,6 +12,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 function terminationLabel(reason) {
     if (reason === 'tab_switch') return 'Submitted due to tab switch';
+    if (reason === 'time_up') return 'Time expired — auto-submitted';
     return null;
 }
 

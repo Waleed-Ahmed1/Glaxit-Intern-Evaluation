@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import "./QuizPage.css";
 
 // In production (Vercel) client + API share the same domain, so '/api' just
@@ -47,10 +47,26 @@ function TimerRing({ value, max, label }) {
 const QuizPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [quiz, setQuiz] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState({});
+
+    // Same pattern as Quizinstructions.jsx's fromDashboard check: this page
+    // should only ever be reached via the instructions page's "Start Quiz"
+    // button, which sets this flag. Anyone opening /quiz/:id/take directly —
+    // a pasted link, a shared URL, a fresh tab — gets sent back through the
+    // proper flow instead of dropping straight into a live, fullscreen,
+    // timed attempt.
+    const cameFromInstructions = !!location.state?.fromInstructions;
+
+    useEffect(() => {
+        if (!cameFromInstructions) {
+            navigate(`/quiz/${id}`, { replace: true });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cameFromInstructions, id]);
 
     // Real countdown, seeded from the quiz's own durationMinutes (from the backend)
     const [timeLeft, setTimeLeft] = useState(0);
@@ -59,6 +75,7 @@ const QuizPage = () => {
     const user = JSON.parse(localStorage.getItem('quiz_user') || '{}');
 
     useEffect(() => {
+        if (!cameFromInstructions) return; // don't fetch the quiz for a gated direct visit
         async function fetchQuiz() {
             try {
                 const token = localStorage.getItem('quiz_token');
@@ -76,7 +93,7 @@ const QuizPage = () => {
             }
         }
         fetchQuiz();
-    }, [id]);
+    }, [id, cameFromInstructions]);
 
     // Tick every second once the quiz (and its real duration) has loaded
     useEffect(() => {
@@ -84,6 +101,18 @@ const QuizPage = () => {
         const timer = setInterval(() => setTimeLeft((prev) => Math.max(0, prev - 1)), 1000);
         return () => clearInterval(timer);
     }, [quiz, timeLeft]);
+
+    // Time's up: submit automatically with whatever's been answered so far,
+    // instead of just letting the countdown sit at 0 while the quiz stays
+    // open. Guarded by `submitting`/`result` so this can't double-fire
+    // alongside a manual Finish click that lands in the same instant.
+    useEffect(() => {
+        if (!quiz || result || submitting) return;
+        if (timeLeft <= 0) {
+            handleSubmit(true, 'time_up');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeLeft, quiz]);
 
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
@@ -224,6 +253,8 @@ const QuizPage = () => {
                     <p className="quiz-result-note">
                         {result.terminationReason === 'tab_switch'
                             ? 'Submitted due to tab switch'
+                            : result.terminationReason === 'time_up'
+                            ? "Time's up — auto-submitted"
                             : result.autoSubmitted
                             ? 'Auto-submitted'
                             : 'Quiz submitted'}
