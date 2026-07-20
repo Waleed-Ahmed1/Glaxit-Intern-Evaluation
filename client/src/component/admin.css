@@ -197,6 +197,11 @@ body {
     background: #00a383;
 }
 
+.btn-export:disabled {
+    background: #9fd9c8;
+    cursor: not-allowed;
+}
+
 /* ======================================================
    OVERVIEW / STATS CARDS
 ====================================================== */

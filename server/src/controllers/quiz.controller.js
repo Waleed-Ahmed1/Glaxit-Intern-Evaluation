@@ -499,3 +499,90 @@ export async function domainStats(req, res) {
         res.status(500).json({ error: 'Something went wrong computing domain performance' });
     }
 }
+
+// Admin-only: everything the "Export" button needs, already joined
+// server-side (one DB round trip per collection) instead of the client
+// making a separate request per student. Returns three parallel row sets
+// — students, quizzes, and individual attempts — the client turns these
+// into sheets in an .xlsx workbook.
+export async function exportData(req, res) {
+    try {
+        const [allStudents, allQuizzes, allAttempts] = await Promise.all([
+            listUsers({ role: 'student' }),
+            listQuizzes({}), // every quiz regardless of status
+            listAllAttempts(),
+        ]);
+
+        const studentMap = new Map(allStudents.map((s) => [s._id.toString(), s]));
+        const quizMap = new Map(allQuizzes.map((q) => [q._id.toString(), q]));
+
+        // Per-student totals, accumulated while walking attempts once below.
+        const studentAgg = new Map(); // studentId -> { count, totalScore, totalPossible }
+
+        const attempts = allAttempts.map((a) => {
+            const student = studentMap.get(a.studentId);
+            const quiz = quizMap.get(a.quizId.toString());
+
+            const agg = studentAgg.get(a.studentId) || { count: 0, totalScore: 0, totalPossible: 0 };
+            agg.count += 1;
+            agg.totalScore += a.score || 0;
+            agg.totalPossible += a.total || 0;
+            studentAgg.set(a.studentId, agg);
+
+            let status = 'Completed';
+            if (a.autoSubmitted) {
+                status = a.terminationReason ? `Auto-submitted (${a.terminationReason})` : 'Auto-submitted';
+            }
+
+            return {
+                studentName: student ? student.name : 'Unknown (account deleted)',
+                studentEmail: student ? student.email : '—',
+                studentDomain: student ? (student.domain || '—') : '—',
+                quizTitle: quiz ? quiz.title : 'Unknown (quiz deleted)',
+                quizDomain: quiz ? (quiz.domain || '—') : '—',
+                score: a.score || 0,
+                total: a.total || 0,
+                percentage: a.total > 0 ? Math.round((a.score / a.total) * 100) : 0,
+                status,
+                violationCount: a.violationCount || 0,
+                timeTakenSeconds: a.timeTakenSeconds || 0,
+                submittedAt: a.submittedAt ? new Date(a.submittedAt).toISOString() : '',
+            };
+        });
+
+        const students = allStudents.map((s) => {
+            const agg = studentAgg.get(s._id.toString()) || { count: 0, totalScore: 0, totalPossible: 0 };
+            return {
+                name: s.name,
+                email: s.email,
+                domain: s.domain || '—',
+                joinedAt: s.createdAt ? new Date(s.createdAt).toISOString() : '',
+                quizzesTaken: agg.count,
+                avgScorePercent: agg.totalPossible > 0 ? Math.round((agg.totalScore / agg.totalPossible) * 100) : 0,
+            };
+        });
+
+        const quizzes = allQuizzes.map((q) => {
+            const quizAttempts = allAttempts.filter((a) => a.quizId.toString() === q._id.toString());
+            const totalScore = quizAttempts.reduce((sum, a) => sum + (a.score || 0), 0);
+            const totalPossible = quizAttempts.reduce((sum, a) => sum + (a.total || 0), 0);
+            return {
+                title: q.title,
+                domain: q.domain || '—',
+                difficulty: q.difficulty,
+                durationMinutes: q.durationMinutes,
+                status: q.status,
+                totalPoints: q.totalPoints,
+                startAt: q.startAt ? new Date(q.startAt).toISOString() : '',
+                endAt: q.endAt ? new Date(q.endAt).toISOString() : '',
+                attemptsCount: quizAttempts.length,
+                avgScorePercent: totalPossible > 0 ? Math.round((totalScore / totalPossible) * 100) : 0,
+            };
+        });
+
+        res.json({ students, quizzes, attempts });
+    } catch (err) {
+        console.error('Export data error:', err);
+        res.status(500).json({ error: 'Something went wrong preparing the export' });
+    }
+}
