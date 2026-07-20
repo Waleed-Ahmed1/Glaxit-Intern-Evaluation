@@ -3,6 +3,7 @@ import { FaEnvelope, FaGraduationCap, FaChevronDown, FaSignOutAlt, FaBars, FaTim
 import { useNavigate, useLocation } from "react-router-dom";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./Student.css";
+import { clearSession } from "../utils/session";
 
 // In production (Vercel) client + API share the same domain, so '/api' just
 // works with no config. Locally, set VITE_API_BASE=http://localhost:3000/api
@@ -232,8 +233,7 @@ const InternDashboard = () => {
     }, []);
 
     function handleLogout() {
-        localStorage.removeItem('quiz_token');
-        localStorage.removeItem('quiz_user');
+        clearSession();
         navigate('/login');
     }
 

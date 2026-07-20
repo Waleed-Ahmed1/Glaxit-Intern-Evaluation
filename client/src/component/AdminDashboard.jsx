@@ -4,6 +4,7 @@ import { FaSearch, FaDownload, FaPlus, FaFileUpload, FaRobot, FaBars, FaTimes } 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import "./admin.css";
 import { DOMAINS } from "../constants/domains";
+import { clearSession } from "../utils/session";
 
 // In production (Vercel) client + API share the same domain, so '/api' just
 // works with no config. Locally, set VITE_API_BASE=http://localhost:3000/api
@@ -585,7 +586,7 @@ const AdminDashboard = () => {
                         <li className={activeTab === 'Overview' ? 'active' : ''} onClick={() => selectTab('Overview')}>Overview</li>
                         <li className={activeTab === 'Interns' ? 'active' : ''} onClick={() => selectTab('Interns')}>Interns</li>
                         <li className={activeTab === 'Management' ? 'active' : ''} onClick={() => selectTab('Management')}>Management</li>
-                        <li onClick={() => { localStorage.removeItem('quiz_token'); localStorage.removeItem('quiz_user'); navigate('/login'); }}>Logout</li>
+                        <li onClick={() => { clearSession(); navigate('/login'); }}>Logout</li>
                     </ul>
                 </nav>
             </aside>

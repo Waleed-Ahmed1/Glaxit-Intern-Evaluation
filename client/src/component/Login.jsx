@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
 import { FaUser, FaLock, FaCheckCircle } from "react-icons/fa";
+import { saveSession, getSession } from "../utils/session";
 
 import logo from "../assets/logo.png";
 import office from "../assets/office.jpg";
@@ -19,6 +20,18 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null); // { name, role } once login succeeds
+
+  // Already logged in with a still-valid (< 1 day old) session? Skip the
+  // form entirely and go straight to the right portal — this is what makes
+  // "stay logged in" actually work instead of asking for email/password
+  // every single time the app is opened.
+  useEffect(() => {
+    const session = getSession();
+    if (session) {
+      navigate(session.user.role === "admin" ? "/admin" : "/student", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -38,8 +51,7 @@ const Login = () => {
         return;
       }
 
-      localStorage.setItem("quiz_token", data.token);
-      localStorage.setItem("quiz_user", JSON.stringify(data.user));
+      saveSession(data.token, data.user);
 
       // Show a brief success card, then send them to the right portal.
       setSuccess({ name: data.user.name, role: data.user.role });
