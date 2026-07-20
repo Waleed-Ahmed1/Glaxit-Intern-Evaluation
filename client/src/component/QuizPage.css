@@ -91,10 +91,16 @@ html, body, #root {
 }
 
 /* --- Card --- */
-/* Fills the page like a proper full-screen quiz, but the footer is pinned to
-   the bottom via margin-top: auto on .quiz-footer below — rather than
-   vertically centering the question block, which stretched the empty space
-   above/below it out on short quizzes. */
+/* Fills the page like a proper full-screen quiz. The whole content block
+   (timer, info, question/options, footer) is centered together as one
+   unit via justify-content: center below — NOT top-anchored with the
+   footer pinned to the very bottom via margin-top: auto. That approach
+   looked fine with a lot of content, but with a single short question on
+   a tall/wide screen it left a huge dead gap between the options and the
+   Previous/Next buttons. Centering the group means the leftover space
+   splits evenly above and below it instead of piling up in one spot —
+   and pushing the footer up on its own (without centering the rest too)
+   just relocates the same problem into a cramped top half. */
 .quiz-card {
     background: #fff;
     border-radius: 16px;
@@ -104,8 +110,10 @@ html, body, #root {
     width: 100%;
     max-width: 1040px;
     min-height: calc(100vh - 80px);
+    min-height: calc(100dvh - 80px);
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
 .quiz-info-box {
@@ -198,15 +206,17 @@ html, body, #root {
     font-weight: 600;
 }
 
-/* Pinned to the bottom of the (full-height) card, so the layout still fills
-   the page even when there's only one short question above it. */
+/* Sits right after the question/options with the normal gap that
+   .quiz-body's margin-bottom already guarantees — no longer pinned to the
+   bottom of the card on its own, since the whole block is centered as a
+   unit via .quiz-card's justify-content: center above. */
 .quiz-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
     max-width: 820px;
     width: 100%;
-    margin: auto auto 0;
+    margin: 0 auto;
 }
 
 .nav-btn {
