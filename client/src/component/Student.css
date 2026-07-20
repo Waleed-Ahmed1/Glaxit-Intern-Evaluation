@@ -2,10 +2,17 @@
    follow the marketing template's dark-mode / centered-column styles from
    index.css. Pin html/body/#root to the dashboard's own background so nothing
    dark can show through, and stop #root's fixed max-width + centering from
-   fighting with this layout. */
+   fighting with this layout.
+
+   color-scheme is the important part on phones: when a phone is in dark
+   mode and the page's content is shorter than the viewport (e.g. smaller
+   system font making everything more compact), Chrome fills the leftover
+   space below the document using the OS/browser's own dark default — not
+   this CSS background — unless the page explicitly declares itself light. */
 html, body, #root {
     background: #f0f2f5;
     min-height: 100%;
+    color-scheme: light;
 }
 #root {
     width: 100%;
@@ -222,7 +229,7 @@ th:nth-child(5), td:nth-child(5) { width: 20%; } /* Action */
        through. Letting the container size itself to its content and
        scroll like a normal page is what actually avoids that gap in
        every case. */
-    .dashboard-container { display: block; height: auto; min-height: 100%; overflow: visible; }
+    .dashboard-container { display: block; height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
 
     .mobile-menu-btn { display: flex; }
     .sidebar-top-row { display: flex; margin-bottom: 20px; }
