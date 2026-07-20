@@ -1,5 +1,24 @@
+/* This is a full light-mode app screen, not a page that should follow a
+   dark-mode default. Pin html/body/#root to this page's own background —
+   otherwise, on a phone in dark mode with short content (e.g. a small
+   system font shrinking everything), the browser fills the leftover space
+   below the document using its own dark default instead of this CSS. */
+html, body, #root {
+    background: #f0f2f5;
+    min-height: 100%;
+    color-scheme: light;
+}
+#root {
+    width: 100%;
+    max-width: 100%;
+    border-inline: none;
+    display: block;
+    text-align: initial;
+}
+
 .quiz-page-outer {
     min-height: 100vh;
+    min-height: 100dvh;
     background-color: #f0f2f5;
     padding: 40px 24px;
     display: flex;
@@ -123,10 +142,17 @@
 
 /* Holds the question + options. No longer flex/centered — it just sits
    naturally after the info box with normal spacing. The footer (outside
-   this wrapper) is what anchors to the bottom of the full-height card. */
+   this wrapper) is what anchors to the bottom of the full-height card.
+   The margin-bottom here is a GUARANTEED minimum gap before the footer —
+   .quiz-footer's margin-top:auto only pushes it down when the card has
+   leftover space (e.g. a tall desktop card with a short question); with
+   little/no leftover space (small font, short content) that auto-margin
+   collapses to 0, and without this margin the footer buttons would sit
+   flush against the last option. */
 .quiz-body {
     display: flex;
     flex-direction: column;
+    margin-bottom: 40px;
 }
 
 .quiz-question {
@@ -235,6 +261,9 @@
     .quiz-card {
         padding: 28px 22px 36px;
         min-height: auto;
+    }
+    .quiz-body {
+        margin-bottom: 28px;
     }
     .quiz-question {
         font-size: 1.15rem;
