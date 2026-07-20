@@ -308,6 +308,8 @@ export async function submitAttempt(req, res) {
             autoSubmitted,
             timeTakenSeconds,
             terminationReason: finalTerminationReason,
+            quizTitle: quiz.title,
+            quizDomain: quiz.domain,
         });
 
         res.status(201).json({
@@ -325,7 +327,10 @@ export async function submitAttempt(req, res) {
 }
 
 // Student's own quiz history — used by the Performance/Dashboard tabs in Student.jsx.
-// Attempts only store quizId, so we join in each quiz's title for display.
+// Newer attempts already carry their own quizTitle/quizDomain snapshot (see
+// createAttempt); for older attempts submitted before that existed, fall back
+// to joining the live quiz — which itself falls back to 'Unknown Quiz' only
+// if that quiz has since been deleted.
 export async function myAttempts(req, res) {
     try {
         const attempts = await listAttemptsForStudent(req.user.id);
@@ -337,7 +342,7 @@ export async function myAttempts(req, res) {
         const result = attempts.map((a) => ({
             _id: a._id,
             quizId: a.quizId,
-            quizTitle: quizMap.get(a.quizId.toString())?.title || 'Unknown Quiz',
+            quizTitle: a.quizTitle || quizMap.get(a.quizId.toString())?.title || 'Unknown Quiz',
             score: a.score,
             total: a.total,
             timeTakenSeconds: a.timeTakenSeconds || 0,
@@ -367,7 +372,7 @@ export async function studentAttempts(req, res) {
         const result = attempts.map((a) => ({
             _id: a._id,
             quizId: a.quizId,
-            quizTitle: quizMap.get(a.quizId.toString())?.title || 'Unknown Quiz',
+            quizTitle: a.quizTitle || quizMap.get(a.quizId.toString())?.title || 'Unknown Quiz',
             score: a.score,
             total: a.total,
             timeTakenSeconds: a.timeTakenSeconds || 0,
@@ -567,8 +572,8 @@ export async function exportWorkbook(req, res) {
                 'Student Name': student ? student.name : 'Unknown (account deleted)',
                 'Student Email': student ? student.email : '—',
                 'Student Domain': student ? (student.domain || '—') : '—',
-                'Quiz Title': quiz ? quiz.title : 'Unknown (quiz deleted)',
-                'Quiz Domain': quiz ? (quiz.domain || '—') : '—',
+                'Quiz Title': a.quizTitle || (quiz ? quiz.title : 'Unknown (quiz deleted)'),
+                'Quiz Domain': a.quizDomain || (quiz ? (quiz.domain || '—') : '—'),
                 'Score': a.score || 0,
                 'Total': a.total || 0,
                 'Percentage': a.total > 0 ? Math.round((a.score / a.total) * 100) : 0,
