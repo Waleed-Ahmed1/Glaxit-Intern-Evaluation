@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { FaSearch, FaDownload, FaPlus, FaFileUpload, FaRobot, FaBars, FaTimes } from "react-icons/fa";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import * as XLSX from 'xlsx';
 import "./admin.css";
 import { DOMAINS } from "../constants/domains";
 
@@ -110,61 +109,34 @@ const AdminDashboard = () => {
     async function handleExport() {
         setExporting(true);
         try {
-            const res = await fetch(`${API_BASE}/quizzes/export-data`, { headers: authHeaders() });
+            const res = await fetch(`${API_BASE}/quizzes/export.xlsx`, { headers: authHeaders() });
             if (res.status === 401 || res.status === 403) {
                 navigate('/login');
                 return;
             }
-            const data = await res.json();
             if (!res.ok) {
-                alert(data.error || 'Failed to prepare the export');
+                let message = 'Failed to prepare the export';
+                try {
+                    const data = await res.json();
+                    message = data.error || message;
+                } catch {
+                    // response wasn't JSON (e.g. a raw 500 page) — keep the default message
+                }
+                alert(message);
                 return;
             }
 
-            const workbook = XLSX.utils.book_new();
-
-            const studentsSheet = XLSX.utils.json_to_sheet(data.students.map((s) => ({
-                'Name': s.name,
-                'Email': s.email,
-                'Domain': s.domain,
-                'Joined': s.joinedAt,
-                'Quizzes Taken': s.quizzesTaken,
-                'Avg Score %': s.avgScorePercent,
-            })));
-            XLSX.utils.book_append_sheet(workbook, studentsSheet, 'Students');
-
-            const attemptsSheet = XLSX.utils.json_to_sheet(data.attempts.map((a) => ({
-                'Student Name': a.studentName,
-                'Student Email': a.studentEmail,
-                'Student Domain': a.studentDomain,
-                'Quiz Title': a.quizTitle,
-                'Quiz Domain': a.quizDomain,
-                'Score': a.score,
-                'Total': a.total,
-                'Percentage': a.percentage,
-                'Status': a.status,
-                'Tab/Fullscreen Violations': a.violationCount,
-                'Time Taken (sec)': a.timeTakenSeconds,
-                'Submitted At': a.submittedAt,
-            })));
-            XLSX.utils.book_append_sheet(workbook, attemptsSheet, 'Quiz Attempts');
-
-            const quizzesSheet = XLSX.utils.json_to_sheet(data.quizzes.map((q) => ({
-                'Title': q.title,
-                'Domain': q.domain,
-                'Difficulty': q.difficulty,
-                'Duration (min)': q.durationMinutes,
-                'Status': q.status,
-                'Total Points': q.totalPoints,
-                'Scheduled Start': q.startAt,
-                'Scheduled End': q.endAt,
-                'Attempts': q.attemptsCount,
-                'Avg Score %': q.avgScorePercent,
-            })));
-            XLSX.utils.book_append_sheet(workbook, quizzesSheet, 'Quizzes');
-
+            // The server sends the finished .xlsx file directly — just save it.
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
             const dateStamp = new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(workbook, `glaxit-export-${dateStamp}.xlsx`);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `glaxit-export-${dateStamp}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert('Could not reach the server to prepare the export');
         } finally {

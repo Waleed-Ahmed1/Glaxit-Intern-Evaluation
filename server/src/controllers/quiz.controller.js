@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import * as XLSX from 'xlsx';
 import {
     createQuiz,
     listQuizzes,
@@ -500,12 +501,11 @@ export async function domainStats(req, res) {
     }
 }
 
-// Admin-only: everything the "Export" button needs, already joined
-// server-side (one DB round trip per collection) instead of the client
-// making a separate request per student. Returns three parallel row sets
-// — students, quizzes, and individual attempts — the client turns these
-// into sheets in an .xlsx workbook.
-export async function exportData(req, res) {
+// Admin-only: builds the Students/Quiz Attempts/Quizzes workbook the
+// "Export" button downloads. Generated entirely server-side (rather than
+// shipping the xlsx library to the browser) so it doesn't add ~600KB to the
+// client bundle and can't run into browser-bundler dependency issues.
+export async function exportWorkbook(req, res) {
     try {
         const [allStudents, allQuizzes, allAttempts] = await Promise.all([
             listUsers({ role: 'student' }),
@@ -519,7 +519,7 @@ export async function exportData(req, res) {
         // Per-student totals, accumulated while walking attempts once below.
         const studentAgg = new Map(); // studentId -> { count, totalScore, totalPossible }
 
-        const attempts = allAttempts.map((a) => {
+        const attemptRows = allAttempts.map((a) => {
             const student = studentMap.get(a.studentId);
             const quiz = quizMap.get(a.quizId.toString());
 
@@ -535,54 +535,64 @@ export async function exportData(req, res) {
             }
 
             return {
-                studentName: student ? student.name : 'Unknown (account deleted)',
-                studentEmail: student ? student.email : '—',
-                studentDomain: student ? (student.domain || '—') : '—',
-                quizTitle: quiz ? quiz.title : 'Unknown (quiz deleted)',
-                quizDomain: quiz ? (quiz.domain || '—') : '—',
-                score: a.score || 0,
-                total: a.total || 0,
-                percentage: a.total > 0 ? Math.round((a.score / a.total) * 100) : 0,
-                status,
-                violationCount: a.violationCount || 0,
-                timeTakenSeconds: a.timeTakenSeconds || 0,
-                submittedAt: a.submittedAt ? new Date(a.submittedAt).toISOString() : '',
+                'Student Name': student ? student.name : 'Unknown (account deleted)',
+                'Student Email': student ? student.email : '—',
+                'Student Domain': student ? (student.domain || '—') : '—',
+                'Quiz Title': quiz ? quiz.title : 'Unknown (quiz deleted)',
+                'Quiz Domain': quiz ? (quiz.domain || '—') : '—',
+                'Score': a.score || 0,
+                'Total': a.total || 0,
+                'Percentage': a.total > 0 ? Math.round((a.score / a.total) * 100) : 0,
+                'Status': status,
+                'Tab/Fullscreen Violations': a.violationCount || 0,
+                'Time Taken (sec)': a.timeTakenSeconds || 0,
+                'Submitted At': a.submittedAt ? new Date(a.submittedAt).toISOString() : '',
             };
         });
 
-        const students = allStudents.map((s) => {
+        const studentRows = allStudents.map((s) => {
             const agg = studentAgg.get(s._id.toString()) || { count: 0, totalScore: 0, totalPossible: 0 };
             return {
-                name: s.name,
-                email: s.email,
-                domain: s.domain || '—',
-                joinedAt: s.createdAt ? new Date(s.createdAt).toISOString() : '',
-                quizzesTaken: agg.count,
-                avgScorePercent: agg.totalPossible > 0 ? Math.round((agg.totalScore / agg.totalPossible) * 100) : 0,
+                'Name': s.name,
+                'Email': s.email,
+                'Domain': s.domain || '—',
+                'Joined': s.createdAt ? new Date(s.createdAt).toISOString() : '',
+                'Quizzes Taken': agg.count,
+                'Avg Score %': agg.totalPossible > 0 ? Math.round((agg.totalScore / agg.totalPossible) * 100) : 0,
             };
         });
 
-        const quizzes = allQuizzes.map((q) => {
+        const quizRows = allQuizzes.map((q) => {
             const quizAttempts = allAttempts.filter((a) => a.quizId.toString() === q._id.toString());
             const totalScore = quizAttempts.reduce((sum, a) => sum + (a.score || 0), 0);
             const totalPossible = quizAttempts.reduce((sum, a) => sum + (a.total || 0), 0);
             return {
-                title: q.title,
-                domain: q.domain || '—',
-                difficulty: q.difficulty,
-                durationMinutes: q.durationMinutes,
-                status: q.status,
-                totalPoints: q.totalPoints,
-                startAt: q.startAt ? new Date(q.startAt).toISOString() : '',
-                endAt: q.endAt ? new Date(q.endAt).toISOString() : '',
-                attemptsCount: quizAttempts.length,
-                avgScorePercent: totalPossible > 0 ? Math.round((totalScore / totalPossible) * 100) : 0,
+                'Title': q.title,
+                'Domain': q.domain || '—',
+                'Difficulty': q.difficulty,
+                'Duration (min)': q.durationMinutes,
+                'Status': q.status,
+                'Total Points': q.totalPoints,
+                'Scheduled Start': q.startAt ? new Date(q.startAt).toISOString() : '',
+                'Scheduled End': q.endAt ? new Date(q.endAt).toISOString() : '',
+                'Attempts': quizAttempts.length,
+                'Avg Score %': totalPossible > 0 ? Math.round((totalScore / totalPossible) * 100) : 0,
             };
         });
 
-        res.json({ students, quizzes, attempts });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(studentRows), 'Students');
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(attemptRows), 'Quiz Attempts');
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(quizRows), 'Quizzes');
+
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const dateStamp = new Date().toISOString().slice(0, 10);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="glaxit-export-${dateStamp}.xlsx"`);
+        res.send(Buffer.from(buffer));
     } catch (err) {
-        console.error('Export data error:', err);
+        console.error('Export workbook error:', err);
         res.status(500).json({ error: 'Something went wrong preparing the export' });
     }
 }
