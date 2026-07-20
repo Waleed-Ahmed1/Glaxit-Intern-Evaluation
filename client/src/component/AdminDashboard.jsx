@@ -13,6 +13,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 function terminationLabel(reason) {
     if (reason === 'tab_switch') return 'Submitted due to tab switch';
     if (reason === 'time_up') return 'Time expired — auto-submitted';
+    if (reason === 'code_mismatch') return 'No/incorrect completion code';
     return null;
 }
 
@@ -73,6 +74,16 @@ const AdminDashboard = () => {
     );
 
     const [exporting, setExporting] = useState(false);
+
+    // Completion code students must enter when finishing a quiz (Finish
+    // click or the timer running out) — set here, checked server-side in
+    // submitAttempt. Doesn't touch quiz creation/editing at all.
+    const [submissionCode, setSubmissionCode] = useState('');
+    const [savedSubmissionCode, setSavedSubmissionCode] = useState(''); // last value confirmed saved, for the "Saved" indicator
+    const [loadingCode, setLoadingCode] = useState(true);
+    const [savingCode, setSavingCode] = useState(false);
+    const [codeError, setCodeError] = useState('');
+    const [codeSavedMsg, setCodeSavedMsg] = useState('');
 
     useEffect(() => {
         function handleResize() {
@@ -210,10 +221,60 @@ const AdminDashboard = () => {
         setStudentAttemptsError('');
     }
 
+    async function fetchSubmissionCode() {
+        setLoadingCode(true);
+        try {
+            const res = await fetch(`${API_BASE}/settings/submission-code`, { headers: authHeaders() });
+            if (res.status === 401 || res.status === 403) {
+                navigate('/login');
+                return;
+            }
+            const data = await res.json();
+            if (res.ok) {
+                setSubmissionCode(data.code || '');
+                setSavedSubmissionCode(data.code || '');
+            }
+        } catch (err) {
+            console.error('Failed to load submission code:', err);
+        } finally {
+            setLoadingCode(false);
+        }
+    }
+
+    async function saveSubmissionCode() {
+        setCodeError('');
+        setCodeSavedMsg('');
+        if (!submissionCode.trim()) {
+            setCodeError('Enter a code before saving');
+            return;
+        }
+        setSavingCode(true);
+        try {
+            const res = await fetch(`${API_BASE}/settings/submission-code`, {
+                method: 'PUT',
+                headers: authHeaders(),
+                body: JSON.stringify({ code: submissionCode }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setCodeError(data.error || 'Could not save the code');
+                return;
+            }
+            setSubmissionCode(data.code);
+            setSavedSubmissionCode(data.code);
+            setCodeSavedMsg('Saved');
+        } catch (err) {
+            setCodeError('Could not reach the server');
+        } finally {
+            setSavingCode(false);
+        }
+    }
+
     useEffect(() => {
         fetchQuizzes();
         fetchStudents();
         fetchDomainStats();
+        fetchSubmissionCode();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -701,6 +762,44 @@ const AdminDashboard = () => {
 
                 {activeTab === 'Management' && !isCreating && (
                     <>
+                        <section className="quiz-builder" style={{ marginBottom: '20px' }}>
+                            <h2>Submission Code</h2>
+                            <p style={{ fontSize: '13px', color: '#888', marginTop: '-8px', marginBottom: '16px' }}>
+                                Students must enter this code when they finish a quiz (either by clicking Finish, or
+                                when the timer runs out) before their score counts — leaving it blank or entering the
+                                wrong code submits with 0 marks. Doesn't affect tab-switch auto-submits, which still
+                                always score 0 with no code needed.
+                            </p>
+                            {loadingCode ? (
+                                <p>Loading...</p>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <input
+                                        type="text"
+                                        className="quiz-input"
+                                        style={{ maxWidth: '260px', margin: 0 }}
+                                        placeholder="e.g. 4821"
+                                        value={submissionCode}
+                                        onChange={(e) => { setSubmissionCode(e.target.value); setCodeSavedMsg(''); }}
+                                    />
+                                    <button
+                                        className="btn-save"
+                                        onClick={saveSubmissionCode}
+                                        disabled={savingCode || submissionCode === savedSubmissionCode}
+                                    >
+                                        {savingCode ? 'Saving...' : 'Save'}
+                                    </button>
+                                    {codeSavedMsg && <span style={{ color: '#00b894', fontSize: '13px' }}>{codeSavedMsg}</span>}
+                                    {codeError && <span style={{ color: 'red', fontSize: '13px' }}>{codeError}</span>}
+                                    {!loadingCode && !savedSubmissionCode && !codeError && (
+                                        <span style={{ color: '#e17055', fontSize: '13px' }}>
+                                            No code set yet — every submission will score 0 until you save one.
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </section>
+
                         <section className="quiz-builder">
                             <h2>All Quizzes</h2>
                             {loadingQuizzes ? (

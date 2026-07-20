@@ -9,6 +9,7 @@ import {
 } from '../models/quiz.model.js';
 import { createAttempt, listAttemptsForStudent, listAllAttempts } from '../models/attempt.model.js';
 import { listUsers } from '../models/user.model.js';
+import { getSubmissionCode } from '../models/settings.model.js';
 
 function validateQuestions(questions) {
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -234,6 +235,7 @@ export async function submitAttempt(req, res) {
             autoSubmitted = false,
             timeTakenSeconds = 0,
             terminationReason = null, // 'tab_switch' — set when force-submitted for repeated tab switching
+            code = '', // completion code the student typed in the popup (see Quiz Management's Submission Code setting)
         } = req.body;
         const isAdmin = req.user.role === 'admin';
 
@@ -258,18 +260,43 @@ export async function submitAttempt(req, res) {
             }
         }
 
-        // Tab-switch terminations always score zero — decided server-side so a
-        // tampered client can't submit real answers alongside a fake reason.
+        // Tab-switch terminations always score zero, no code involved — exactly
+        // the same as before this feature existed.
         const isTabSwitchTermination = terminationReason === 'tab_switch';
 
-        let score = 0;
+        // Everything else (a normal Finish click, or the timer running out)
+        // now needs the completion code the admin has set on the Management
+        // screen. Checked server-side — a tampered client can't submit real
+        // answers alongside a fake "code was correct" flag. Comparison is a
+        // straight string match; an admin who hasn't set a code yet means
+        // getSubmissionCode() returns '', so codeOk is false and every
+        // submission scores 0 until one is configured.
+        let codeOk = false;
         if (!isTabSwitchTermination) {
+            const requiredCode = await getSubmissionCode();
+            const submittedCode = typeof code === 'string' ? code.trim() : '';
+            codeOk = requiredCode.length > 0 && submittedCode === requiredCode;
+        }
+
+        let score = 0;
+        if (!isTabSwitchTermination && codeOk) {
             quiz.questions.forEach((q) => {
                 if (answers[q.id] === q.correctIndex) {
                     score += q.points || 1;
                 }
             });
         }
+
+        // Keep whatever reason triggered the submission (null for a manual
+        // Finish, 'time_up' for the timer) UNLESS the code was missing/wrong,
+        // in which case we tag it 'code_mismatch' so the history/export views
+        // can show why the score is 0 — same idea as 'tab_switch' already
+        // being visible there.
+        const finalTerminationReason = isTabSwitchTermination
+            ? 'tab_switch'
+            : codeOk
+            ? terminationReason
+            : 'code_mismatch';
 
         const attempt = await createAttempt({
             quizId: req.params.id,
@@ -280,7 +307,7 @@ export async function submitAttempt(req, res) {
             violationCount,
             autoSubmitted,
             timeTakenSeconds,
-            terminationReason: isTabSwitchTermination ? 'tab_switch' : null,
+            terminationReason: finalTerminationReason,
         });
 
         res.status(201).json({
@@ -530,8 +557,10 @@ export async function exportWorkbook(req, res) {
             studentAgg.set(a.studentId, agg);
 
             let status = 'Completed';
-            if (a.autoSubmitted) {
-                status = a.terminationReason ? `Auto-submitted (${a.terminationReason})` : 'Auto-submitted';
+            if (a.terminationReason) {
+                status = a.autoSubmitted ? `Auto-submitted (${a.terminationReason})` : `Completed (${a.terminationReason})`;
+            } else if (a.autoSubmitted) {
+                status = 'Auto-submitted';
             }
 
             return {

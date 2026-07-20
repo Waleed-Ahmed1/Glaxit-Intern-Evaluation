@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.routes.js';
 import quizRoutes from './routes/quiz.routes.js';
 import userRoutes from './routes/user.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 import cors from 'cors';
 
 const app = express()
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/settings', settingsRoutes);
 
 
 export default app;

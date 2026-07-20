@@ -118,6 +118,14 @@ const QuizPage = () => {
     const [submitError, setSubmitError] = useState('');
     const [result, setResult] = useState(null); // { score, total } once the backend confirms it
 
+    // --- Completion code popup ---
+    // Set by the admin on the Management screen. Required for a normal
+    // Finish click or the timer running out; NOT required for a tab-switch
+    // auto-submit, which keeps scoring 0 immediately exactly as before.
+    const [showCodeModal, setShowCodeModal] = useState(false);
+    const [enteredCode, setEnteredCode] = useState('');
+    const pendingSubmissionRef = useRef(null); // { auto, terminationReason } waiting on the code popup
+
     // Once the backend confirms the result, show it briefly then head straight
     // to My Quizzes — no manual "Back to Dashboard" click needed.
     useEffect(() => {
@@ -190,16 +198,44 @@ const QuizPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tabSwitchCount]);
 
-    async function handleSubmit(auto = false, terminationReason = null) {
-        if (submitting) return;
-        setSubmitting(true);
-        setSubmitError('');
+    // Entry point for every ending: the Finish button, the time-up effect,
+    // and the tab-switch effect all call this exactly like before.
+    function handleSubmit(auto = false, terminationReason = null) {
+        if (submitting || showCodeModal) return;
 
-        // Drop out of fullscreen right away so the result popup appears in
-        // normal windowed mode instead of staying stuck behind fullscreen.
+        // Drop out of fullscreen right away so whatever comes next (the code
+        // popup, or the result) appears in normal windowed mode.
         if (document.fullscreenElement && document.exitFullscreen) {
             document.exitFullscreen().catch(() => {});
         }
+
+        if (terminationReason === 'tab_switch') {
+            // Unchanged from before this feature existed: no code needed,
+            // scores 0 immediately.
+            performSubmit(auto, terminationReason, '');
+            return;
+        }
+
+        // Manual Finish or the timer running out: ask for the completion
+        // code before actually submitting.
+        pendingSubmissionRef.current = { auto, terminationReason };
+        setEnteredCode('');
+        setShowCodeModal(true);
+    }
+
+    // Called when the student confirms the code popup (whether they typed a
+    // code or left it blank) — actually sends the attempt to the backend,
+    // which checks the code server-side and scores 0 if it's missing/wrong.
+    function confirmCodeAndSubmit() {
+        const pending = pendingSubmissionRef.current || { auto: true, terminationReason: null };
+        setShowCodeModal(false);
+        performSubmit(pending.auto, pending.terminationReason, enteredCode);
+    }
+
+    async function performSubmit(auto, terminationReason, code) {
+        if (submitting) return;
+        setSubmitting(true);
+        setSubmitError('');
 
         const totalSeconds = (quiz.durationMinutes || 15) * 60;
         const timeTakenSeconds = totalSeconds - timeLeft;
@@ -219,6 +255,7 @@ const QuizPage = () => {
                     autoSubmitted: auto,
                     timeTakenSeconds,
                     terminationReason,
+                    code,
                 }),
             });
             const data = await res.json();
@@ -255,6 +292,8 @@ const QuizPage = () => {
                             ? 'Submitted due to tab switch'
                             : result.terminationReason === 'time_up'
                             ? "Time's up — auto-submitted"
+                            : result.terminationReason === 'code_mismatch'
+                            ? 'Completion code missing or incorrect — scored 0'
                             : result.autoSubmitted
                             ? 'Auto-submitted'
                             : 'Quiz submitted'}
@@ -271,7 +310,7 @@ const QuizPage = () => {
     const secondsLeft = timeLeft % 60;
 
     return (
-        <div className={`quiz-page-outer ${(!isFullscreen || showTabWarning) ? 'is-blurred' : ''}`}>
+        <div className={`quiz-page-outer ${(!isFullscreen || showTabWarning || showCodeModal) ? 'is-blurred' : ''}`}>
             <div
                 className="quiz-card"
                 onContextMenu={(e) => e.preventDefault()}
@@ -364,6 +403,38 @@ const QuizPage = () => {
                         </p>
                         <button className="nav-btn nav-btn-primary" onClick={() => setShowTabWarning(false)}>
                             I Understand, Continue
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showCodeModal && (
+                <div className="fullscreen-warning-overlay">
+                    <div className="fullscreen-warning-box">
+                        <div className="fullscreen-warning-icon">!</div>
+                        <h2>Enter completion code</h2>
+                        <p>
+                            Ask your instructor/proctor for today's completion code and enter it below to submit
+                            your quiz. Leaving this blank or entering the wrong code will submit with a score of 0.
+                        </p>
+                        <input
+                            type="text"
+                            autoFocus
+                            value={enteredCode}
+                            onChange={(e) => setEnteredCode(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') confirmCodeAndSubmit(); }}
+                            placeholder="Completion code"
+                            style={{
+                                width: '100%', boxSizing: 'border-box', padding: '12px', marginTop: '4px', marginBottom: '16px',
+                                borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center',
+                            }}
+                        />
+                        <button
+                            className="nav-btn nav-btn-primary"
+                            disabled={submitting}
+                            onClick={confirmCodeAndSubmit}
+                        >
+                            {submitting ? 'Submitting...' : 'Submit Quiz'}
                         </button>
                     </div>
                 </div>
