@@ -861,6 +861,9 @@ const AdminDashboard = () => {
                                     Domain is required to create a quiz
                                 </p>
                             )}
+                            <label style={{ fontSize: '12px', color: '#666', fontWeight: 600, margin: '6px 0 -2px' }}>
+                                Quiz Date
+                            </label>
                             <input
                                 type="date"
                                 className="quiz-input"
@@ -870,24 +873,32 @@ const AdminDashboard = () => {
                                 style={attemptedSave && !quizDetails.date ? { borderColor: '#e74c3c' } : undefined}
                             />
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <input
-                                    type="time"
-                                    className="quiz-input"
-                                    placeholder="Start Time"
-                                    value={quizDetails.startTime}
-                                    onChange={(e) => setQuizDetails({ ...quizDetails, startTime: e.target.value })}
-                                    required
-                                    style={attemptedSave && !quizDetails.startTime ? { borderColor: '#e74c3c' } : undefined}
-                                />
-                                <input
-                                    type="time"
-                                    className="quiz-input"
-                                    placeholder="End Time"
-                                    value={quizDetails.endTime}
-                                    onChange={(e) => setQuizDetails({ ...quizDetails, endTime: e.target.value })}
-                                    required
-                                    style={attemptedSave && !quizDetails.endTime ? { borderColor: '#e74c3c' } : undefined}
-                                />
+                                <div style={{ flex: 1, minWidth: '140px' }}>
+                                    <label style={{ fontSize: '12px', color: '#666', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                                        Start Time
+                                    </label>
+                                    <input
+                                        type="time"
+                                        className="quiz-input"
+                                        value={quizDetails.startTime}
+                                        onChange={(e) => setQuizDetails({ ...quizDetails, startTime: e.target.value })}
+                                        required
+                                        style={{ width: '100%', boxSizing: 'border-box', ...(attemptedSave && !quizDetails.startTime ? { borderColor: '#e74c3c' } : {}) }}
+                                    />
+                                </div>
+                                <div style={{ flex: 1, minWidth: '140px' }}>
+                                    <label style={{ fontSize: '12px', color: '#666', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                                        End Time
+                                    </label>
+                                    <input
+                                        type="time"
+                                        className="quiz-input"
+                                        value={quizDetails.endTime}
+                                        onChange={(e) => setQuizDetails({ ...quizDetails, endTime: e.target.value })}
+                                        required
+                                        style={{ width: '100%', boxSizing: 'border-box', ...(attemptedSave && !quizDetails.endTime ? { borderColor: '#e74c3c' } : {}) }}
+                                    />
+                                </div>
                             </div>
                             {(() => {
                                 const schedule = getScheduleInfo(quizDetails);

@@ -30,3 +30,20 @@ export async function updateCode(req, res) {
         res.status(500).json({ error: 'Could not save the submission code' });
     }
 }
+
+// Any authenticated user (students included) can check whether a code they
+// typed matches, WITHOUT it counting as a real quiz submission. Used by the
+// quiz completion-code retry flow so a mistyped code doesn't burn the
+// student's actual submission — they get a few tries at this endpoint first.
+export async function verifyCode(req, res) {
+    try {
+        const { code } = req.body;
+        const required = await getSubmissionCode();
+        const submitted = typeof code === 'string' ? code.trim() : '';
+        const valid = required.length > 0 && submitted === required;
+        res.json({ valid });
+    } catch (err) {
+        console.error('Verify submission code error:', err);
+        res.status(500).json({ error: 'Could not verify the code' });
+    }
+}

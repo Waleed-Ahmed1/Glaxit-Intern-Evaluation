@@ -124,6 +124,9 @@ const QuizPage = () => {
     // auto-submit, which keeps scoring 0 immediately exactly as before.
     const [showCodeModal, setShowCodeModal] = useState(false);
     const [enteredCode, setEnteredCode] = useState('');
+    const [codeAttemptsLeft, setCodeAttemptsLeft] = useState(3);
+    const [codeError, setCodeError] = useState('');
+    const [verifyingCode, setVerifyingCode] = useState(false);
     const pendingSubmissionRef = useRef(null); // { auto, terminationReason } waiting on the code popup
 
     // Once the backend confirms the result, show it briefly then head straight
@@ -220,16 +223,64 @@ const QuizPage = () => {
         // code before actually submitting.
         pendingSubmissionRef.current = { auto, terminationReason };
         setEnteredCode('');
+        setCodeAttemptsLeft(3);
+        setCodeError('');
         setShowCodeModal(true);
     }
 
-    // Called when the student confirms the code popup (whether they typed a
-    // code or left it blank) — actually sends the attempt to the backend,
-    // which checks the code server-side and scores 0 if it's missing/wrong.
-    function confirmCodeAndSubmit() {
+    // Called when the student confirms the code popup. Unlike before, this no
+    // longer submits the quiz on the first try — it checks the code against
+    // a lightweight verify endpoint first, and only lets a WRONG code through
+    // to the real submission (which scores 0) after 3 failed tries. A correct
+    // code always submits immediately. The backend's submitAttempt endpoint
+    // still re-checks the code itself, so this is just a friendlier retry UX,
+    // not a security boundary.
+    async function confirmCodeAndSubmit() {
         const pending = pendingSubmissionRef.current || { auto: true, terminationReason: null };
+        const typedCode = enteredCode.trim();
+
+        setVerifyingCode(true);
+        setCodeError('');
+
+        let valid = false;
+        try {
+            const token = localStorage.getItem('quiz_token');
+            const res = await fetch(`${API_BASE}/settings/submission-code/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: typedCode }),
+            });
+            const data = await res.json();
+            valid = !!data.valid;
+        } catch (err) {
+            valid = false; // couldn't reach the verify endpoint — treat this as a failed try
+        }
+
+        setVerifyingCode(false);
+
+        if (valid) {
+            setShowCodeModal(false);
+            performSubmit(pending.auto, pending.terminationReason, typedCode);
+            return;
+        }
+
+        const remaining = codeAttemptsLeft - 1;
+        setCodeAttemptsLeft(remaining);
+
+        if (remaining > 0) {
+            // Still have tries left — keep the popup open so they can try again.
+            setCodeError(`Incorrect code. ${remaining} attempt${remaining === 1 ? '' : 's'} left.`);
+            setEnteredCode('');
+            return;
+        }
+
+        // Out of attempts — submit for real with the (still wrong) code so the
+        // backend scores it 0 and tags it 'code_mismatch', exactly as before.
         setShowCodeModal(false);
-        performSubmit(pending.auto, pending.terminationReason, enteredCode);
+        performSubmit(pending.auto, pending.terminationReason, typedCode);
     }
 
     async function performSubmit(auto, terminationReason, code) {
@@ -415,7 +466,8 @@ const QuizPage = () => {
                         <h2>Enter completion code</h2>
                         <p>
                             Ask your instructor/proctor for today's completion code and enter it below to submit
-                            your quiz. Leaving this blank or entering the wrong code will submit with a score of 0.
+                            your quiz. You have {codeAttemptsLeft} attempt{codeAttemptsLeft === 1 ? '' : 's'} left —
+                            after that your quiz submits automatically with a score of 0.
                         </p>
                         <input
                             type="text"
@@ -425,16 +477,20 @@ const QuizPage = () => {
                             onKeyDown={(e) => { if (e.key === 'Enter') confirmCodeAndSubmit(); }}
                             placeholder="Completion code"
                             style={{
-                                width: '100%', boxSizing: 'border-box', padding: '12px', marginTop: '4px', marginBottom: '16px',
-                                borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem', textAlign: 'center',
+                                width: '100%', boxSizing: 'border-box', padding: '12px', marginTop: '4px', marginBottom: '8px',
+                                borderRadius: '8px', border: codeError ? '1px solid #e74c3c' : '1px solid #ddd',
+                                fontSize: '1rem', textAlign: 'center',
                             }}
                         />
+                        {codeError && (
+                            <p style={{ color: '#e74c3c', fontSize: '13px', margin: '0 0 12px' }}>{codeError}</p>
+                        )}
                         <button
                             className="nav-btn nav-btn-primary"
-                            disabled={submitting}
+                            disabled={submitting || verifyingCode}
                             onClick={confirmCodeAndSubmit}
                         >
-                            {submitting ? 'Submitting...' : 'Submit Quiz'}
+                            {verifyingCode ? 'Checking...' : submitting ? 'Submitting...' : 'Submit Quiz'}
                         </button>
                     </div>
                 </div>
