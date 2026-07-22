@@ -3,12 +3,17 @@
 // Keeping these in one place means a student's domain and a quiz's domain
 // are always drawn from the exact same list, so matching them up works reliably.
 export const DOMAINS = [
-  "Frontend Development",
-  "Backend Development",
-  "Full Stack Development",
+  "AI Engineering",
+  "Cybersecurity",
+  "Full-Stack Development",
   "Mobile App Development",
-  "Data Science",
-  "DevOps",
-  "UI/UX Design",
-  "Quality Assurance",
+  "WordPress Development",
+  "QA Software Testing",
+  "UI/UX Designing",
+  "Graphic Designing",
+  "Video Editing",
+  "Digital Marketing/AI SEO",
+  "Business Development",
+  "Project Management",
+  "Lead Generation Executive",
 ];

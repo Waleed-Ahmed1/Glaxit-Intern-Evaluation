@@ -57,15 +57,23 @@ const RESET_TOKEN_EXPIRES_IN = '10m';
 const EMAIL_PATTERN =
     /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
+// Keep this in sync with client/src/constants/domains.js — the client's
+// DOMAINS array is the source of truth for what students see in the
+// dropdown, and this list is what actually gets accepted server-side.
 const VALID_DOMAINS = [
-    'Frontend Development',
-    'Backend Development',
-    'Full Stack Development',
+    'AI Engineering',
+    'Cybersecurity',
+    'Full-Stack Development',
     'Mobile App Development',
-    'Data Science',
-    'DevOps',
-    'UI/UX Design',
-    'Quality Assurance',
+    'WordPress Development',
+    'QA Software Testing',
+    'UI/UX Designing',
+    'Graphic Designing',
+    'Video Editing',
+    'Digital Marketing/AI SEO',
+    'Business Development',
+    'Project Management',
+    'Lead Generation Executive',
 ];
 
 const packageDisposableDomains =
