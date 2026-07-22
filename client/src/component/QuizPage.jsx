@@ -68,8 +68,22 @@ const QuizPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cameFromInstructions, id]);
 
-    // Real countdown, seeded from the quiz's own durationMinutes (from the backend)
+    // Real countdown. Seeded from whichever is SMALLER: the quiz's full
+    // durationMinutes, or the time actually left until quiz.endAt (using the
+    // server's clock, not this device's). Without that cap, a student who
+    // opens a 10-minute quiz with 1 minute left on the window would still
+    // see a fresh 10-minute countdown — and by the time it hit 0 and tried
+    // to auto-submit, the backend would already reject it with "This quiz
+    // window has closed" (submitAttempt enforces endAt independently), so
+    // the attempt would be silently lost.
     const [timeLeft, setTimeLeft] = useState(0);
+    // The actual starting value timeLeft was seeded with — used (instead of
+    // the raw durationMinutes) for both timeTakenSeconds and the timer
+    // ring's max, so both stay consistent with what the student really saw.
+    const [initialSeconds, setInitialSeconds] = useState(0);
+    // Set only if the quiz loaded but its window had already closed by the
+    // time we checked the server clock — distinct from "quiz not found".
+    const [windowClosed, setWindowClosed] = useState(false);
 
     // Read-only display value, same localStorage read used elsewhere in the app
     const user = JSON.parse(localStorage.getItem('quiz_user') || '{}');
@@ -79,13 +93,53 @@ const QuizPage = () => {
         async function fetchQuiz() {
             try {
                 const token = localStorage.getItem('quiz_token');
-                const res = await fetch(`${API_BASE}/quizzes/${id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    setQuiz(data);
-                    setTimeLeft((data.durationMinutes || 15) * 60);
+
+                // Fetch the quiz and the server's own clock together. We need
+                // the server's "now" (not this device's) to correctly cap the
+                // countdown — same reasoning as why unlocking a quiz early is
+                // enforced server-side elsewhere in the app.
+                const [quizRes, timeRes] = await Promise.all([
+                    fetch(`${API_BASE}/quizzes/${id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }),
+                    fetch(`${API_BASE}/time`),
+                ]);
+
+                const data = await quizRes.json();
+
+                if (quizRes.ok) {
+                    const fullDurationSeconds = (data.durationMinutes || 15) * 60;
+                    let startingSeconds = fullDurationSeconds;
+
+                    if (data.endAt) {
+                        let serverNowMs = Date.now(); // fallback if /api/time is unreachable
+                        try {
+                            const timeData = await timeRes.json();
+                            if (timeRes.ok && timeData?.now) {
+                                serverNowMs = timeData.now;
+                            }
+                        } catch {
+                            // keep the Date.now() fallback above
+                        }
+
+                        const secondsUntilEnd = Math.floor(
+                            (new Date(data.endAt).getTime() - serverNowMs) / 1000
+                        );
+                        startingSeconds = Math.max(0, Math.min(fullDurationSeconds, secondsUntilEnd));
+                    }
+
+                    if (startingSeconds <= 0) {
+                        // The window closed in the moment between the
+                        // instructions page and this page loading. Don't
+                        // start an attempt that would immediately
+                        // auto-submit with zero answers — show a clear
+                        // message instead.
+                        setWindowClosed(true);
+                    } else {
+                        setQuiz(data);
+                        setInitialSeconds(startingSeconds);
+                        setTimeLeft(startingSeconds);
+                    }
                 }
                 setLoading(false);
             } catch {
@@ -288,8 +342,7 @@ const QuizPage = () => {
         setSubmitting(true);
         setSubmitError('');
 
-        const totalSeconds = (quiz.durationMinutes || 15) * 60;
-        const timeTakenSeconds = totalSeconds - timeLeft;
+        const timeTakenSeconds = initialSeconds - timeLeft;
         const totalViolations = fullscreenExitCount + tabSwitchCount;
 
         try {
@@ -330,6 +383,7 @@ const QuizPage = () => {
     }
 
     if (loading) return <div className="quiz-page-outer"><div className="quiz-card"><h2>Loading...</h2></div></div>;
+    if (windowClosed) return <div className="quiz-page-outer"><div className="quiz-card"><h2>This quiz window has closed.</h2></div></div>;
     if (!quiz) return <div className="quiz-page-outer"><div className="quiz-card"><h2>Quiz not found.</h2></div></div>;
 
     // Shown once the backend has scored the attempt and saved it as completed
@@ -356,7 +410,7 @@ const QuizPage = () => {
 
     const currentQ = quiz.questions[currentIndex];
     const isLast = currentIndex === quiz.questions.length - 1;
-    const totalSeconds = (quiz.durationMinutes || 15) * 60;
+    const totalSeconds = initialSeconds || (quiz.durationMinutes || 15) * 60;
     const minutesLeft = Math.floor(timeLeft / 60);
     const secondsLeft = timeLeft % 60;
 
