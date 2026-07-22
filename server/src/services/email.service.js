@@ -54,9 +54,9 @@ function buildOtpTemplate(otp) {
     style="
         margin:0;
         padding:0;
-        background:#111214;
+        background:#ffffff;
         font-family:Arial,Helvetica,sans-serif;
-        color:#ffffff;
+        color:#1a1a1a;
     "
 >
     <table
@@ -65,7 +65,7 @@ function buildOtpTemplate(otp) {
         cellspacing="0"
         cellpadding="0"
         border="0"
-        style="background:#111214;padding:32px 12px;"
+        style="background:#ffffff;padding:32px 12px;"
     >
         <tr>
             <td align="center">
@@ -78,10 +78,11 @@ function buildOtpTemplate(otp) {
                     border="0"
                     style="
                         max-width:660px;
-                        background:#202124;
+                        background:#ffffff;
                         border-radius:22px;
                         overflow:hidden;
-                        border:1px solid #2c2e33;
+                        border:1px solid #e4e6ea;
+                        box-shadow:0 2px 10px rgba(0,0,0,0.06);
                     "
                 >
                     <tr>
@@ -96,8 +97,8 @@ function buildOtpTemplate(otp) {
                                     display:inline-block;
                                     padding:8px 14px;
                                     border-radius:999px;
-                                    background:#15243b;
-                                    color:#4f8df7;
+                                    background:#eaf1ff;
+                                    color:#2563eb;
                                     font-size:12px;
                                     font-weight:700;
                                     letter-spacing:1.4px;
@@ -112,7 +113,7 @@ function buildOtpTemplate(otp) {
                                     margin:20px 0 0;
                                     font-size:28px;
                                     line-height:1.25;
-                                    color:#ffffff;
+                                    color:#111214;
                                     font-weight:700;
                                 "
                             >
@@ -131,7 +132,7 @@ function buildOtpTemplate(otp) {
                             <p
                                 style="
                                     margin:0;
-                                    color:#aeb4bf;
+                                    color:#5b6472;
                                     font-size:16px;
                                     line-height:1.7;
                                 "
@@ -149,11 +150,11 @@ function buildOtpTemplate(otp) {
                             <div
                                 style="
                                     display:inline-block;
-                                    background:#151619;
-                                    border:1px solid #44474e;
+                                    background:#f4f6f9;
+                                    border:1px solid #d7dce3;
                                     border-radius:12px;
                                     padding:20px 28px;
-                                    color:#4f8df7;
+                                    color:#2563eb;
                                     font-size:44px;
                                     line-height:1;
                                     font-weight:800;
@@ -176,13 +177,13 @@ function buildOtpTemplate(otp) {
                             <p
                                 style="
                                     margin:0;
-                                    color:#9aa1ad;
+                                    color:#616875;
                                     font-size:15px;
                                     line-height:1.65;
                                 "
                             >
                                 This code is valid for exactly
-                                <strong style="color:#ffffff;">
+                                <strong style="color:#111214;">
                                     2 minutes
                                 </strong>.
 
@@ -193,7 +194,7 @@ function buildOtpTemplate(otp) {
                             <div
                                 style="
                                     height:1px;
-                                    background:#34363c;
+                                    background:#e4e6ea;
                                     margin:30px 0 22px;
                                 "
                             ></div>
@@ -201,7 +202,7 @@ function buildOtpTemplate(otp) {
                             <p
                                 style="
                                     margin:0;
-                                    color:#727986;
+                                    color:#8b919c;
                                     font-size:12px;
                                     line-height:1.6;
                                 "
