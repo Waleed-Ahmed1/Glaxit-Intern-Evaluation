@@ -81,7 +81,7 @@ function buildOtpTemplate(otp) {
                         background:#ffffff;
                         border-radius:22px;
                         overflow:hidden;
-                        border:1px solid #e4e6ea;
+                        border:1px solid #ffffff;
                         box-shadow:0 2px 10px rgba(0,0,0,0.06);
                     "
                 >
@@ -97,8 +97,8 @@ function buildOtpTemplate(otp) {
                                     display:inline-block;
                                     padding:8px 14px;
                                     border-radius:999px;
-                                    background:#eaf1ff;
-                                    color:#2563eb;
+                                    background:#effbf9;
+                                    color:#117c75;
                                     font-size:12px;
                                     font-weight:700;
                                     letter-spacing:1.4px;
@@ -150,11 +150,11 @@ function buildOtpTemplate(otp) {
                             <div
                                 style="
                                     display:inline-block;
-                                    background:#f4f6f9;
-                                    border:1px solid #d7dce3;
+                                    background:#effbf9;
+                                    border:1px solid #c9eee9;
                                     border-radius:12px;
                                     padding:20px 28px;
-                                    color:#2563eb;
+                                    color:#18b4aa;
                                     font-size:44px;
                                     line-height:1;
                                     font-weight:800;
