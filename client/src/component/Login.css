@@ -173,6 +173,8 @@ body{
 
     overflow:hidden;
 
+    padding:0 110px 0 40px;
+
 }
 
 /* Teal Overlay */
@@ -197,7 +199,9 @@ body{
 
     z-index:5;
 
-    width:80%;
+    width:100%;
+
+    max-width:480px;
 
     text-align:center;
 
@@ -390,31 +394,13 @@ body{
 
     display:flex;
 
-    justify-content:space-between;
+    justify-content:flex-end;
 
     align-items:center;
 
     margin-bottom:30px;
 
     font-size:14px;
-
-}
-
-.remember{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:8px;
-
-    color:#555;
-
-}
-
-.remember input{
-
-    accent-color:#19b3aa;
 
 }
 
@@ -431,6 +417,64 @@ body{
 .login-options a:hover{
 
     text-decoration:underline;
+
+}
+
+/* ======================================================
+   LINK-STYLE BUTTONS (forgot password flow)
+====================================================== */
+
+.link-btn{
+
+    background:none;
+
+    border:none;
+
+    padding:0;
+
+    color:#19b3aa;
+
+    font-size:14px;
+
+    font-weight:500;
+
+    cursor:pointer;
+
+    font-family:inherit;
+
+}
+
+.link-btn:hover{
+
+    text-decoration:underline;
+
+}
+
+.link-btn:disabled{
+
+    color:#a9b1b0;
+
+    cursor:not-allowed;
+
+    text-decoration:none;
+
+}
+
+.back-link{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    color:#666;
+
+    font-weight:500;
+
+}
+
+.back-link:hover{
+
+    color:#19b3aa;
 
 }
 
@@ -522,6 +566,8 @@ max-width:520px;
 
 height:280px;
 
+padding:0 30px;
+
 }
 
 .curve{
@@ -572,6 +618,8 @@ border-radius:16px;
 
 height:220px;
 
+padding:0 20px;
+
 }
 
 .right-side{
@@ -621,12 +669,6 @@ height:48px;
 height:48px;
 
 font-size:16px;
-
-}
-
-.left-content{
-
-width:90%;
 
 }
 

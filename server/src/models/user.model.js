@@ -52,6 +52,18 @@ export async function updateUser(id, updates) {
     return result;
 }
 
+// Used by the "forgot password" flow once the OTP has been verified.
+// Deliberately separate from updateUser() (which strips passwordHash out
+// of generic updates) so this is the only path that can set a new hash.
+export async function updateUserPasswordByEmail(email, passwordHash) {
+    const result = await usersCollection().findOneAndUpdate(
+        { email: String(email || '').toLowerCase() },
+        { $set: { passwordHash, passwordUpdatedAt: new Date() } },
+        { returnDocument: 'after', projection: { passwordHash: 0 } }
+    );
+    return result;
+}
+
 export async function deleteUser(id) {
     const { ObjectId } = await import('mongodb');
     const result = await usersCollection().deleteOne({ _id: new ObjectId(id) });

@@ -38,7 +38,12 @@ function getTransporter() {
     return transporter;
 }
 
-function buildOtpTemplate(otp) {
+function buildOtpTemplate(otp, {
+    title = 'Glaxit Verification Code',
+    heading = 'Glaxit Verification Code',
+    description = 'Your one-time registration verification code is:',
+    disclaimer = 'If you did not request this account registration, please ignore this email.',
+} = {}) {
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -47,7 +52,7 @@ function buildOtpTemplate(otp) {
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
-    <title>Glaxit Verification Code</title>
+    <title>${title}</title>
 </head>
 
 <body
@@ -117,7 +122,7 @@ function buildOtpTemplate(otp) {
                                     font-weight:700;
                                 "
                             >
-                                Glaxit Verification Code
+                                ${heading}
                             </h1>
                         </td>
                     </tr>
@@ -137,7 +142,7 @@ function buildOtpTemplate(otp) {
                                     line-height:1.7;
                                 "
                             >
-                                Your one-time registration verification code is:
+                                ${description}
                             </p>
                         </td>
                     </tr>
@@ -187,8 +192,7 @@ function buildOtpTemplate(otp) {
                                     2 minutes
                                 </strong>.
 
-                                If you did not request this account
-                                registration, please ignore this email.
+                                ${disclaimer}
                             </p>
 
                             <div
@@ -247,5 +251,39 @@ export async function sendRegistrationOtpEmail({
         ].join('\n'),
 
         html: buildOtpTemplate(otp),
+    });
+}
+
+export async function sendPasswordResetOtpEmail({
+    to,
+    otp,
+}) {
+    const smtpUser = process.env.SMTP_USER;
+
+    const from =
+        process.env.EMAIL_FROM ||
+        `"Glaxit" <${smtpUser}>`;
+
+    return getTransporter().sendMail({
+        from,
+        to,
+        subject: 'Glaxit password reset code',
+
+        text: [
+            'Glaxit Password Reset Code',
+            '',
+            `Your one-time password reset code is: ${otp}`,
+            '',
+            'This code is valid for exactly 2 minutes.',
+            'If you did not request a password reset, please ignore this email and your password will remain unchanged.',
+        ].join('\n'),
+
+        html: buildOtpTemplate(otp, {
+            title: 'Glaxit Password Reset Code',
+            heading: 'Glaxit Password Reset Code',
+            description: 'Your one-time password reset code is:',
+            disclaimer:
+                'If you did not request a password reset, please ignore this email and your password will remain unchanged.',
+        }),
     });
 }

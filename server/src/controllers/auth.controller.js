@@ -12,6 +12,7 @@ import { createRequire } from 'node:module';
 import {
     createUser,
     findUserByEmail,
+    updateUserPasswordByEmail,
 } from '../models/user.model.js';
 
 import {
@@ -20,10 +21,16 @@ import {
     findRegistrationOtp,
     incrementRegistrationOtpAttempts,
     saveRegistrationOtp,
+    consumePasswordResetOtp,
+    deletePasswordResetOtp,
+    findPasswordResetOtp,
+    incrementPasswordResetOtpAttempts,
+    savePasswordResetOtp,
 } from '../models/otp.model.js';
 
 import {
     sendRegistrationOtpEmail,
+    sendPasswordResetOtpEmail,
 } from '../services/email.service.js';
 
 const require = createRequire(import.meta.url);
@@ -36,6 +43,16 @@ const ADMIN_EMAIL_DOMAIN = 'glaxit.com';
 const OTP_TTL_MS = 2 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
+
+// Password reset OTPs use the same lifetime/attempt rules as registration.
+const RESET_OTP_TTL_MS = OTP_TTL_MS;
+const RESET_OTP_RESEND_COOLDOWN_MS = OTP_RESEND_COOLDOWN_MS;
+const RESET_OTP_MAX_ATTEMPTS = OTP_MAX_ATTEMPTS;
+
+// Short-lived token proving "this email just verified a password reset OTP",
+// so the final "set new password" step doesn't need the OTP re-sent.
+const RESET_TOKEN_PURPOSE = 'password_reset';
+const RESET_TOKEN_EXPIRES_IN = '10m';
 
 const EMAIL_PATTERN =
     /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
@@ -208,6 +225,51 @@ function hashOtp({
             `${normalizeEmail(email)}:${otp}`
         )
         .digest('hex');
+}
+
+function hashPasswordResetOtp({
+    email,
+    otp,
+}) {
+    return createHmac(
+        'sha256',
+        getOtpSecret()
+    )
+        .update(
+            `password_reset:` +
+            `${normalizeEmail(email)}:${otp}`
+        )
+        .digest('hex');
+}
+
+function signPasswordResetToken(email) {
+    return jwt.sign(
+        {
+            purpose: RESET_TOKEN_PURPOSE,
+            email: normalizeEmail(email),
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: RESET_TOKEN_EXPIRES_IN,
+        }
+    );
+}
+
+function verifyPasswordResetToken(token) {
+    try {
+        const payload = jwt.verify(
+            String(token || ''),
+            process.env.JWT_SECRET
+        );
+
+        if (payload?.purpose !== RESET_TOKEN_PURPOSE) {
+            return null;
+        }
+
+        return payload;
+    } catch {
+        return null;
+    }
 }
 
 function hashesMatch(
@@ -718,6 +780,412 @@ export async function register(
         return res.status(500).json({
             error:
                 'Something went wrong during registration',
+        });
+    }
+}
+
+/*
+ * FORGOT PASSWORD — STEP ONE
+ *
+ * Confirm an account exists for this email, then send a
+ * one-time code to it. Nothing about the password changes yet.
+ */
+export async function requestPasswordResetOtp(
+    req,
+    res
+) {
+    try {
+        const email =
+            normalizeEmail(req.body.email);
+
+        if (!EMAIL_PATTERN.test(email)) {
+            return res.status(400).json({
+                error:
+                    'Please enter a valid email address',
+            });
+        }
+
+        const user =
+            await findUserByEmail(email);
+
+        if (!user) {
+            return res.status(404).json({
+                error:
+                    'No account was found with this email address',
+            });
+        }
+
+        const now = new Date();
+
+        const previousOtp =
+            await findPasswordResetOtp(email);
+
+        if (previousOtp?.lastSentAt) {
+            const elapsed =
+                now.getTime() -
+                new Date(
+                    previousOtp.lastSentAt
+                ).getTime();
+
+            if (
+                elapsed <
+                RESET_OTP_RESEND_COOLDOWN_MS
+            ) {
+                const retryAfterSeconds =
+                    Math.ceil(
+                        (
+                            RESET_OTP_RESEND_COOLDOWN_MS -
+                            elapsed
+                        ) / 1000
+                    );
+
+                return res
+                    .status(429)
+                    .json({
+                        error:
+                            `Please wait ` +
+                            `${retryAfterSeconds} seconds ` +
+                            `before requesting another code`,
+
+                        retryAfterSeconds,
+                    });
+            }
+        }
+
+        const otp = String(
+            randomInt(
+                100000,
+                1000000
+            )
+        );
+
+        const expiresAt = new Date(
+            now.getTime() +
+            RESET_OTP_TTL_MS
+        );
+
+        const otpHash =
+            hashPasswordResetOtp({
+                email,
+                otp,
+            });
+
+        await savePasswordResetOtp({
+            email,
+            otpHash,
+            expiresAt,
+            sentAt: now,
+        });
+
+        try {
+            await sendPasswordResetOtpEmail({
+                to: email,
+                otp,
+            });
+        } catch (emailError) {
+            await deletePasswordResetOtp(
+                email
+            );
+
+            console.error(
+                'Password reset OTP email error:',
+                emailError
+            );
+
+            return res.status(500).json({
+                error:
+                    'Could not send the verification ' +
+                    'email. Please try again.',
+            });
+        }
+
+        return res.json({
+            message:
+                'Verification code sent successfully',
+
+            email,
+
+            expiresInSeconds:
+                RESET_OTP_TTL_MS / 1000,
+
+            resendAfterSeconds:
+                RESET_OTP_RESEND_COOLDOWN_MS /
+                1000,
+        });
+    } catch (error) {
+        console.error(
+            'Request password reset OTP error:',
+            error
+        );
+
+        return res.status(500).json({
+            error:
+                'Could not create a verification code',
+        });
+    }
+}
+
+/*
+ * FORGOT PASSWORD — STEP TWO
+ *
+ * Verify the code. On success, issue a short-lived reset
+ * token so the final step doesn't need the OTP again.
+ */
+export async function verifyPasswordResetOtp(
+    req,
+    res
+) {
+    try {
+        const email =
+            normalizeEmail(req.body.email);
+
+        const otp =
+            String(req.body.otp || '')
+                .trim();
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                error:
+                    'Email and verification code are required',
+            });
+        }
+
+        if (!/^\d{6}$/.test(otp)) {
+            return res.status(400).json({
+                error:
+                    'Enter the complete 6-digit ' +
+                    'verification code',
+            });
+        }
+
+        const otpRecord =
+            await findPasswordResetOtp(
+                email
+            );
+
+        if (!otpRecord) {
+            return res.status(400).json({
+                error:
+                    'No valid verification request ' +
+                    'was found. Please request a new code.',
+            });
+        }
+
+        if (
+            new Date(
+                otpRecord.expiresAt
+            ).getTime() <= Date.now()
+        ) {
+            await deletePasswordResetOtp(
+                email
+            );
+
+            return res.status(400).json({
+                error:
+                    'The verification code has expired. ' +
+                    'Please request a new code.',
+            });
+        }
+
+        if (
+            (otpRecord.attempts || 0) >=
+            RESET_OTP_MAX_ATTEMPTS
+        ) {
+            await deletePasswordResetOtp(
+                email
+            );
+
+            return res.status(429).json({
+                error:
+                    'Too many incorrect attempts. ' +
+                    'Please request a new code.',
+            });
+        }
+
+        const submittedHash =
+            hashPasswordResetOtp({
+                email,
+                otp,
+            });
+
+        if (
+            !hashesMatch(
+                otpRecord.otpHash,
+                submittedHash
+            )
+        ) {
+            const updatedRecord =
+                await incrementPasswordResetOtpAttempts(
+                    email
+                );
+
+            const attempts =
+                updatedRecord?.attempts ||
+                (otpRecord.attempts || 0) +
+                    1;
+
+            const attemptsRemaining =
+                Math.max(
+                    RESET_OTP_MAX_ATTEMPTS -
+                        attempts,
+                    0
+                );
+
+            if (
+                attemptsRemaining === 0
+            ) {
+                await deletePasswordResetOtp(
+                    email
+                );
+
+                return res
+                    .status(429)
+                    .json({
+                        error:
+                            'Too many incorrect attempts. ' +
+                            'Please request a new code.',
+                    });
+            }
+
+            return res.status(400).json({
+                error:
+                    `Incorrect verification code. ` +
+                    `${attemptsRemaining} ` +
+                    `attempt${
+                        attemptsRemaining === 1
+                            ? ''
+                            : 's'
+                    } remaining.`,
+            });
+        }
+
+        /*
+         * Code is correct — consume it so it can't be
+         * reused, and hand back a short-lived token that
+         * authorizes setting a new password.
+         */
+        const consumedOtp =
+            await consumePasswordResetOtp({
+                email,
+                otpHash: submittedHash,
+            });
+
+        if (!consumedOtp) {
+            return res.status(400).json({
+                error:
+                    'The verification code has expired ' +
+                    'or has already been used',
+            });
+        }
+
+        const resetToken =
+            signPasswordResetToken(email);
+
+        return res.json({
+            message:
+                'Verification code confirmed',
+
+            resetToken,
+        });
+    } catch (error) {
+        console.error(
+            'Verify password reset OTP error:',
+            error
+        );
+
+        return res.status(500).json({
+            error:
+                'Could not verify the code',
+        });
+    }
+}
+
+/*
+ * FORGOT PASSWORD — STEP THREE
+ *
+ * With a valid reset token in hand, set the new password.
+ */
+export async function resetPassword(
+    req,
+    res
+) {
+    try {
+        const resetToken =
+            req.body.resetToken;
+
+        const newPassword =
+            String(
+                req.body.newPassword || ''
+            );
+
+        if (!resetToken || !newPassword) {
+            return res.status(400).json({
+                error:
+                    'A reset token and new password are required',
+            });
+        }
+
+        if (
+            newPassword.length < 8 ||
+            newPassword.length > 72
+        ) {
+            return res.status(400).json({
+                error:
+                    'Password must be between ' +
+                    '8 and 72 characters',
+            });
+        }
+
+        const payload =
+            verifyPasswordResetToken(
+                resetToken
+            );
+
+        if (!payload) {
+            return res.status(400).json({
+                error:
+                    'This reset session has expired. ' +
+                    'Please start the password reset again.',
+            });
+        }
+
+        const email = payload.email;
+
+        const user =
+            await findUserByEmail(email);
+
+        if (!user) {
+            return res.status(404).json({
+                error:
+                    'No account was found with this email address',
+            });
+        }
+
+        const passwordHash =
+            await bcrypt.hash(
+                newPassword,
+                10
+            );
+
+        await updateUserPasswordByEmail(
+            email,
+            passwordHash
+        );
+
+        return res.json({
+            message:
+                'Password updated successfully. ' +
+                'You can now log in with your new password.',
+        });
+    } catch (error) {
+        console.error(
+            'Reset password error:',
+            error
+        );
+
+        return res.status(500).json({
+            error:
+                'Something went wrong while resetting your password',
         });
     }
 }
