@@ -225,6 +225,13 @@ export async function remove(req, res) {
     }
 }
 
+// A short grace window on submission only (not on getOne) — an auto-submit
+// at time-up needs a few seconds to show the completion-code popup and post
+// the answers, so `now` will almost always be slightly past endAt in the
+// normal case. getOne() still blocks loading a closed quiz fresh; this just
+// stops that unavoidable lag from failing a legitimate final submit.
+const SUBMIT_GRACE_MS = 2 * 60 * 1000; // 2 minutes
+
 // Students submit their answers here. Scoring happens server-side because
 // the correct answers are never sent to the client.
 export async function submitAttempt(req, res) {
@@ -255,7 +262,7 @@ export async function submitAttempt(req, res) {
             if (quiz.startAt && now < new Date(quiz.startAt).getTime()) {
                 return res.status(403).json({ error: 'This quiz has not started yet' });
             }
-            if (quiz.endAt && now > new Date(quiz.endAt).getTime()) {
+            if (quiz.endAt && now > new Date(quiz.endAt).getTime() + SUBMIT_GRACE_MS) {
                 return res.status(403).json({ error: 'This quiz window has closed' });
             }
         }
